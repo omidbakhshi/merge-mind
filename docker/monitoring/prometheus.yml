@@ -7,7 +7,7 @@ rule_files:
   # - "second_rules.yml"
 
 scrape_configs:
-  - job_name: 'gitlab-ai-reviewer'
+  - job_name: 'merge-mind'
     static_configs:
       - targets: ['ai-reviewer:8080']
     scrape_interval: 5s

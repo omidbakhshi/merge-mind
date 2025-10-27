@@ -3,7 +3,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: gitlab-ai-reviewer
+    container_name: merge-mind
     environment:
       # GitLab Configuration
       GITLAB_URL: ${GITLAB_URL}

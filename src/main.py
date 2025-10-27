@@ -314,7 +314,7 @@ class GitLabReviewerApp:
             """Basic health check endpoint"""
             return HealthCheckResponse(
                 status="healthy",
-                service="gitlab-ai-reviewer",
+                service="merge-mind",
                 timestamp=datetime.now().isoformat()
             )
 
@@ -323,7 +323,7 @@ class GitLabReviewerApp:
             """Detailed health check for all dependencies"""
             health_status = {
                 "status": "healthy",
-                "service": "gitlab-ai-reviewer",
+                "service": "merge-mind",
                 "timestamp": datetime.now().isoformat(),
                 "checks": {}
             }

@@ -50,8 +50,8 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 ### 1. Clone and Setup
 
 ```bash
-git clone https://github.com/yourorg/gitlab-ai-reviewer.git
-cd gitlab-ai-reviewer
+https://github.com/omidbakhshi/merge-mind.git
+cd merge-mind
 
 # Create virtual environment
 python -m venv venv
@@ -408,7 +408,7 @@ docker compose -f docker/docker-compose.yml down
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gitlab-ai-reviewer
+  name: merge-mind
 spec:
   replicas: 2
   selector:
@@ -421,7 +421,7 @@ spec:
     spec:
       containers:
       - name: reviewer
-        image: gitlab-ai-reviewer:latest
+        image: merge-mind:latest
         env:
         - name: GITLAB_URL
           valueFrom:
@@ -579,9 +579,9 @@ MIT License - see LICENSE file
 
 ## 💬 Support
 
-- Issues: [GitHub Issues](https://github.com/yourorg/gitlab-ai-reviewer/issues)
-- Documentation: [Wiki](https://github.com/yourorg/gitlab-ai-reviewer/wiki)
-- Email: ai-reviewer@yourcompany.com
+- Issues: [GitHub Issues](https://github.com/omidbakhshi/merge-mind/issues)
+- Documentation: [Wiki](https://github.com/omidbakhshi/merge-mind/wiki)
+- Email: omid.bakhshi.dev@gmail.com
 
 ## 🙏 Acknowledgments
 
@@ -925,14 +925,14 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="gitlab-ai-reviewer",
+    name="merge-mind",
     version="1.0.0",
     author="Your Name",
     author_email="your.email@company.com",
-    description="AI-powered code review bot for GitLab",
+    description="AI-powered code review assistant for GitLab - Merge Mind",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourorg/gitlab-ai-reviewer",
+    url="https://github.com/yourorg/merge-mind",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
