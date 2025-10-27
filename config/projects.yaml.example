@@ -1,0 +1,123 @@
+# Example projects configuration for GitLab AI Code Reviewer
+# Copy this file to projects.yaml and customize for your projects
+#
+# To get your project IDs:
+# 1. Go to your GitLab project
+# 2. Check the URL: https://gitlab.com/your-group/your-project/-/merge_requests
+# 3. The project ID is in the URL or API responses
+
+projects:
+  # Example project 1
+  - project_id: 123
+    name: my-awesome-project
+    description: 'Main application codebase'
+    review_enabled: true
+    auto_review_on_open: true
+    review_drafts: false
+    min_lines_changed: 10
+    max_files_per_review: 50
+    excluded_paths:
+      - vendor/
+      - node_modules/
+      - dist/
+      - build/
+      - .git/
+      - __pycache__/
+      - '*.lock'
+      - '*.log'
+    included_extensions:
+      - .py
+      - .js
+      - .ts
+      - .java
+      - .go
+      - .rs
+      - .cpp
+      - .c
+      - .cs
+      - .rb
+      - .php
+      - .swift
+      - .kotlin
+      - .scala
+      - .sql
+      - .yaml
+      - .yml
+      - .json
+      - .xml
+      - .html
+      - .css
+    review_model: gpt-4-turbo-preview
+    custom_prompts: {}
+    team_preferences: []
+
+  # Example project 2
+  - project_id: 456
+    name: api-service
+    description: 'REST API service'
+    review_enabled: true
+    auto_review_on_open: true
+    review_drafts: false
+    min_lines_changed: 5  # Lower threshold for API changes
+    max_files_per_review: 25
+    excluded_paths:
+      - vendor/
+      - node_modules/
+      - dist/
+      - build/
+      - .git/
+      - __pycache__/
+      - '*.lock'
+      - '*.log'
+      - 'tests/'  # Exclude test files from review
+    included_extensions:
+      - .py
+      - .js
+      - .ts
+    review_model: gpt-3.5-turbo  # Use faster model for API
+    custom_prompts:
+      api_review: "Focus on API design, security, and documentation"
+    team_preferences:
+      - "Require API documentation updates"
+      - "Check for proper error handling"
+
+# Default settings applied to all projects (can be overridden per project)
+default:
+  review_enabled: true
+  auto_review_on_open: true
+  review_drafts: false
+  min_lines_changed: 10
+  max_files_per_review: 50
+  excluded_paths:
+    - vendor/
+    - node_modules/
+    - dist/
+    - build/
+    - .git/
+    - __pycache__/
+    - '*.lock'
+    - '*.log'
+  included_extensions:
+    - .py
+    - .js
+    - .ts
+    - .java
+    - .go
+    - .rs
+    - .cpp
+    - .c
+    - .cs
+    - .rb
+    - .php
+    - .swift
+    - .kotlin
+    - .scala
+    - .sql
+    - .yaml
+    - .yml
+    - .json
+    - .xml
+    - .html
+    - .css
+    - .scss
+  review_model: gpt-4-turbo-preview

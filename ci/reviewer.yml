@@ -1,0 +1,57 @@
+.ai_review_template:
+  stage: test
+  image: python:3.11-slim
+  variables:
+    REVIEWER_URL: ${CI_SERVER_URL}/ai-review
+    REVIEW_ENABLED: "true"
+  before_script:
+    - apt-get update && apt-get install -y curl jq
+  script:
+    - |
+      if [ "$REVIEW_ENABLED" != "true" ]; then
+        echo "AI Review is disabled"
+        exit 0
+      fi
+      
+      # Trigger AI review
+      echo "Triggering AI code review for MR ${CI_MERGE_REQUEST_IID}..."
+      
+      RESPONSE=$(curl -X POST \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer ${AI_REVIEWER_TOKEN}" \
+        "${REVIEWER_URL}/review/${CI_PROJECT_ID}/${CI_MERGE_REQUEST_IID}" \
+        -w "\n%{http_code}" \
+        -s)
+      
+      HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
+      BODY=$(echo "$RESPONSE" | head -n -1)
+      
+      if [ "$HTTP_CODE" != "200" ]; then
+        echo "Review request failed with status $HTTP_CODE"
+        echo "Response: $BODY"
+        exit 1
+      fi
+      
+      # Parse response
+      STATUS=$(echo "$BODY" | jq -r '.status')
+      REVIEW_STATUS=$(echo "$BODY" | jq -r '.summary.status')
+      
+      echo "Review completed with status: $STATUS"
+      echo "Review verdict: $REVIEW_STATUS"
+      
+      # Fail pipeline if critical issues found
+      if [ "$REVIEW_STATUS" = "needs_work" ]; then
+        echo "Critical issues found - blocking merge"
+        exit 1
+      fi
+  only:
+    - merge_requests
+  allow_failure: true
+
+# Job that can be extended in project CI
+ai_code_review:
+  extends: .ai_review_template
+  rules:
+    - if: '$CI_MERGE_REQUEST_IID && $AI_REVIEW_ENABLED == "true"'
+      when: always
+    - when: never

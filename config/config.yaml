@@ -1,0 +1,252 @@
+# Global configuration for GitLab AI Code Reviewer
+# Location: config/config.yaml
+#
+# Note: Sensitive values should use environment variables
+# Format: ${ENV_VAR_NAME} will be replaced with the environment variable value
+
+# GitLab Configuration
+gitlab:
+  # Your GitLab instance URL (without trailing slash)
+  url: ${GITLAB_URL}
+
+  # Personal access token with api, read_repository, write_repository scopes
+  token: ${GITLAB_TOKEN}
+
+  # Secret token for webhook validation (optional but recommended)
+  webhook_secret: ${GITLAB_WEBHOOK_SECRET}
+
+  # Timeout for GitLab API calls (seconds)
+  timeout: 30
+
+  # Maximum retries for failed API calls
+  max_retries: 3
+
+# OpenAI Configuration
+openai:
+  # OpenAI API key
+  api_key: ${OPENAI_API_KEY}
+
+  # Model to use for code review
+  # Options: gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo
+  model: gpt-4-turbo-preview
+
+  # Maximum tokens for response
+  max_tokens: 2000
+
+  # Temperature for response generation (0.0 to 1.0)
+  # Lower = more focused/deterministic, Higher = more creative
+  temperature: 0.3
+
+  # Request timeout (seconds)
+  timeout: 60
+
+  # Maximum retries for failed requests
+  max_retries: 3
+
+  # Embedding model for vector store
+  embedding_model: text-embedding-ada-002
+
+# Vector Store Configuration
+vector_store:
+  # Type of vector store to use
+  # Options: chromadb, qdrant, pinecone
+  type: qdrant
+
+  # Storage path for local vector databases (or URL for remote)
+  path: ./storage/vectordb
+
+  # Collection name prefix
+  collection_prefix: gitlab_code_
+
+  # ChromaDB specific settings
+  chromadb:
+    persist_directory: ./storage/chromadb
+    anonymized_telemetry: false
+
+  # Qdrant specific settings (if using Qdrant)
+  qdrant:
+    host: qdrant
+    port: 6333
+    collection_size: 1536  # Dimension of embeddings
+
+  # Pinecone specific settings (if using Pinecone)
+  pinecone:
+    api_key: ${PINECONE_API_KEY}
+    environment: ${PINECONE_ENV}
+    index_name: gitlab-code-review
+
+# Server Configuration
+server:
+  # Host to bind to
+  host: 0.0.0.0
+
+  # Port to listen on
+  port: 8080
+
+  # Number of worker processes
+  workers: 4
+
+  # Enable CORS
+  cors_enabled: true
+
+  # Allowed CORS origins
+  cors_origins:
+    - "*"
+
+  # API rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 100
+    requests_per_hour: 1000
+
+# Review Configuration
+review:
+  # Maximum length of a single comment
+  max_comment_length: 1000
+
+  # Number of files to review in parallel
+  batch_size: 5
+
+  # Number of context lines to include around changes
+  context_lines: 10
+
+  # Review severity levels (in order of importance)
+  severity_levels:
+    - critical    # Security vulnerabilities, data loss risks
+    - major       # Bugs, performance issues
+    - minor       # Code style, best practices
+    - suggestion  # Improvements, optimizations
+
+  # Default severity thresholds for blocking merge
+  blocking_severities:
+    - critical
+    - major
+
+  # Maximum files to review per merge request
+  default_max_files: 50
+
+  # Minimum lines changed to trigger review
+  default_min_lines: 10
+
+  # Cache settings
+  cache:
+    enabled: true
+    ttl_seconds: 3600  # 1 hour
+    max_size_mb: 100
+
+# Learning Configuration
+learning:
+  # Enable continuous learning
+  enabled: true
+
+  # How often to run learning cycles (hours)
+  update_interval_hours: 24
+
+  # Minimum repository stars for learning (0 = all repos)
+  min_stars_for_learning: 0
+
+  # Maximum file size to process (KB)
+  max_file_size_kb: 500
+
+  # File chunk size for embeddings (lines)
+  chunk_size: 100
+
+  # Chunk overlap for context (lines)
+  chunk_overlap: 20
+
+  # Pattern detection settings
+  patterns:
+    # Minimum occurrences to consider a pattern
+    min_occurrences: 3
+
+    # Confidence threshold for using patterns
+    min_confidence: 0.6
+
+    # Maximum age for patterns (days)
+    max_age_days: 90
+
+  # Feedback processing
+  feedback:
+    # Types of feedback to process
+    types:
+      - helpful
+      - not_helpful
+      - false_positive
+
+    # Weight adjustments based on feedback
+    confidence_adjustment: 0.1
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: INFO
+
+  # Log format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Log file settings
+  file:
+    enabled: true
+    path: logs/reviewer.log
+    max_size_mb: 100
+    backup_count: 5
+
+  # Console logging
+  console:
+    enabled: true
+    colored: true
+
+# Monitoring Configuration
+monitoring:
+  # Prometheus metrics
+  metrics:
+    enabled: true
+    path: /metrics
+
+  # Health check
+  health_check:
+    enabled: true
+    path: /health
+
+  # Statistics endpoint
+  stats:
+    enabled: true
+    path: /stats
+
+# Security Configuration
+security:
+  # Enable API authentication
+  api_auth:
+    enabled: false
+    token: ${API_AUTH_TOKEN}
+
+  # Webhook signature validation
+  webhook_validation:
+    enabled: true
+    algorithm: hmac-sha256
+
+  # Allowed IP addresses (empty = all allowed)
+  allowed_ips: []
+
+  # Request size limits
+  max_request_size_mb: 10
+
+# Feature Flags
+features:
+  # Enable draft MR reviews by default
+  review_drafts: false
+
+  # Auto-approve if no issues found
+  auto_approve: false
+
+  # Post review summary
+  post_summary: true
+
+  # Update pipeline status
+  update_pipeline_status: true
+
+  # Learn from merged MRs
+  learn_from_merges: true
+
+  # Process feedback
+  process_feedback: true

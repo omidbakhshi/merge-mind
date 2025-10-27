@@ -1,0 +1,93 @@
+services:
+  ai-reviewer:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gitlab-ai-reviewer
+    environment:
+      # GitLab Configuration
+      GITLAB_URL: ${GITLAB_URL}
+      GITLAB_TOKEN: ${GITLAB_TOKEN}
+      GITLAB_WEBHOOK_SECRET: ${GITLAB_WEBHOOK_SECRET}
+
+      # OpenAI Configuration
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Server Configuration
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: 8080
+      SERVER_WORKERS: 4
+
+       # Logging
+       LOG_LEVEL: INFO
+
+       # Monitoring Configuration
+       MONITORING_METRICS_ENABLED: true
+       MONITORING_HEALTH_CHECK_ENABLED: true
+       MONITORING_STATS_ENABLED: true
+
+       # Circuit Breaker Configuration
+       CIRCUIT_BREAKER_OPENAI_FAILURE_THRESHOLD: 3
+       CIRCUIT_BREAKER_GITLAB_FAILURE_THRESHOLD: 5
+       CIRCUIT_BREAKER_QDRANT_FAILURE_THRESHOLD: 3
+
+    ports:
+      - "8080:8080"
+      - "9090:9090"  # Prometheus metrics port
+
+    volumes:
+      # Persistent storage for vector database
+      - vectordb_data:/app/storage/vectordb
+
+      # Configuration files
+      - ../config:/app/config:rw
+
+      # Scripts
+      - ../scripts:/app/scripts:ro
+
+      # Test codebase for local learning
+      - ../test_codebase:/app/test_codebase:ro
+
+      # Logs
+      - ../logs:/app/logs
+
+    restart: unless-stopped
+
+    networks:
+      - gitlab-network
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  # Optional: Qdrant as separate service for production
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    volumes:
+      - qdrant_data:/qdrant/storage
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    networks:
+      - gitlab-network
+    restart: unless-stopped
+
+volumes:
+  vectordb_data:
+    driver: local
+  qdrant_data:
+    driver: local
+
+networks:
+  gitlab-network:
+    driver: bridge

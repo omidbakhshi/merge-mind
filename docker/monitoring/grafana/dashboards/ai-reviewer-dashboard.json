@@ -1,0 +1,80 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "GitLab AI Code Reviewer",
+    "tags": ["gitlab", "ai", "code-review"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Review Processing Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(gitlab_ai_reviews_processed_total[5m])",
+            "legendFormat": "Reviews per second"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Circuit Breaker Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "gitlab_ai_circuit_breaker_state",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "API Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(gitlab_ai_request_duration_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(gitlab_ai_request_duration_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}
