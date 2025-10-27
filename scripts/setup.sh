@@ -1,6 +1,6 @@
 set -e
 
-echo "🚀 Setting up GitLab AI Code Reviewer"
+echo "🚀 Setting up Merge Mind"
 
 # Check for required environment variables
 required_vars=("GITLAB_URL" "GITLAB_TOKEN" "OPENAI_API_KEY")

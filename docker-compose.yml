@@ -1,7 +1,7 @@
 services:
   ai-reviewer:
     build:
-      context: ..
+      context: .
       dockerfile: docker/Dockerfile
     container_name: merge-mind
     environment:
@@ -38,16 +38,16 @@ services:
       - vectordb_data:/app/storage/vectordb
 
       # Configuration files
-      - ../config:/app/config:rw
+      - ./config:/app/config:rw
 
       # Scripts
-      - ../scripts:/app/scripts:ro
+      - ./scripts:/app/scripts:ro
 
       # Test codebase for local learning
-      - ../test_codebase:/app/test_codebase:ro
+      - ./test_codebase:/app/test_codebase:ro
 
       # Logs
-      - ../logs:/app/logs
+      - ./logs:/app/logs
 
     restart: unless-stopped
 

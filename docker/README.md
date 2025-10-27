@@ -1,6 +1,6 @@
 # Docker Deployment
 
-This directory contains Docker configuration for deploying the GitLab AI Code Reviewer.
+This directory contains Docker configuration for deploying Merge Mind.
 
 ## Quick Start
 

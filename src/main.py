@@ -1,5 +1,5 @@
 """
-Main entry point for GitLab AI Code Reviewer service
+Main entry point for Merge Mind service
 Location: src/main.py
 """
 
@@ -200,7 +200,7 @@ class GitLabReviewerApp:
             await self.shutdown()
 
         app = FastAPI(
-            title="GitLab AI Code Reviewer", version="1.0.0", lifespan=lifespan
+            title="Merge Mind", version="1.0.0", lifespan=lifespan
         )
 
         @app.post("/webhook", response_model=WebhookResponse)

@@ -1,7 +1,7 @@
 {
   "dashboard": {
     "id": null,
-    "title": "GitLab AI Code Reviewer",
+    "title": "Merge Mind",
     "tags": ["gitlab", "ai", "code-review"],
     "timezone": "browser",
     "panels": [

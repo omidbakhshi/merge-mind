@@ -1,4 +1,4 @@
-# Global configuration for GitLab AI Code Reviewer
+# Global configuration for Merge Mind
 # Location: config/config.yaml
 #
 # Note: Sensitive values should use environment variables

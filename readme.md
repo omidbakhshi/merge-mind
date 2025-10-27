@@ -1,4 +1,4 @@
-# GitLab AI Code Reviewer
+# Merge Mind
 
 An intelligent, self-learning code review bot for self-hosted GitLab instances. Uses OpenAI's GPT models to provide context-aware code reviews while learning from your team's coding patterns and preferences.
 
@@ -912,7 +912,7 @@ class TestOpenAIAnalyzer:
 
 ```python
 """
-Setup configuration for GitLab AI Code Reviewer
+Setup configuration for Merge Mind
 Location: setup.py
 """
 

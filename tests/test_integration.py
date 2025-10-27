@@ -1,5 +1,5 @@
 """
-Integration test suite for GitLab AI Code Reviewer
+Integration test suite for Merge Mind
 Location: tests/test_integration.py
 
 Tests the full review pipeline with mocked external services

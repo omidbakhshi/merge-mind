@@ -1,5 +1,5 @@
 """
-Performance test suite for GitLab AI Code Reviewer
+Performance test suite for Merge Mind
 Location: tests/test_performance.py
 
 Tests performance improvements from caching, batching, and optimizations

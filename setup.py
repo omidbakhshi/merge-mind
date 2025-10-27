@@ -1,6 +1,6 @@
 # setup.py
 """
-Setup configuration for GitLab AI Code Reviewer
+Setup configuration for Merge Mind
 Location: setup.py (root directory)
 """
 
