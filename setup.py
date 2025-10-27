@@ -11,7 +11,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="merge-mind",
-    version="1.0.0",
+    version="1.2.0",
     author="Your Team",
     author_email="ai-reviewer@yourcompany.com",
     description="AI-powered code review assistant for GitLab - Merge Mind",

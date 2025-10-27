@@ -200,7 +200,7 @@ class GitLabReviewerApp:
             await self.shutdown()
 
         app = FastAPI(
-            title="Merge Mind", version="1.0.0", lifespan=lifespan
+            title="Merge Mind", version="1.2.0", lifespan=lifespan
         )
 
         @app.post("/webhook", response_model=WebhookResponse)
