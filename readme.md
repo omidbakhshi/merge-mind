@@ -350,7 +350,27 @@ The bot learns in three ways:
     # From local codebase (recommended)
     docker compose -f docker/docker-compose.yml exec ai-reviewer \
       python scripts/learn_local_codebase.py my_project /path/to/codebase
-    ```
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- Setting up a development environment
+- Code style and testing guidelines
+- Submitting pull requests
+- Reporting issues and requesting features
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- OpenAI for providing the GPT models that power the AI analysis
+- The GitLab community for their excellent API and platform
+- Qdrant for their high-performance vector database
+- All contributors who help improve Merge Mind
 
 2. **Continuous Learning**: Automatically learns from merged MRs
     - Extracts patterns from successful merges
