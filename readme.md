@@ -50,7 +50,7 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 ### 1. Clone and Setup
 
 ```bash
-https://github.com/omidbakhshi/merge-mind.git
+git clone https://github.com/omidbakhshi/merge-mind.git
 cd merge-mind
 
 # Create virtual environment
