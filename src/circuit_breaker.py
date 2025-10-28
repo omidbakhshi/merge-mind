@@ -174,7 +174,7 @@ class CircuitBreaker:
 class CircuitBreakerRegistry:
     """Registry for managing multiple circuit breakers"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.breakers: Dict[str, CircuitBreaker] = {}
         self._lock = threading.Lock()
 

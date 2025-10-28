@@ -13,6 +13,10 @@ from collections import defaultdict
 import hashlib
 from pathlib import Path
 
+from src.vector_store import VectorStoreBase
+from src.gitlab_client import GitLabClient
+from src.config_manager import ConfigManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,7 +68,7 @@ class TeamPreference:
 class LearningEngine:
     """Manages continuous learning from code reviews and feedback"""
 
-    def __init__(self, vector_store, gitlab_client, config_manager):
+    def __init__(self, vector_store: VectorStoreBase, gitlab_client: GitLabClient, config_manager: ConfigManager) -> None:
         self.vector_store = vector_store
         self.gitlab_client = gitlab_client
         self.config = config_manager

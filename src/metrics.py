@@ -70,7 +70,7 @@ class LearningMetrics:
 class MetricsCollector:
     """Simple metrics collector for the application"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = threading.Lock()
         self.review_metrics: Dict[str, ReviewMetrics] = {}
         self.learning_metrics: Dict[str, LearningMetrics] = {}

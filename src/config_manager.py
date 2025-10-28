@@ -5,7 +5,7 @@ Location: src/config_manager.py
 """
 
 import os
-import yaml
+import yaml  # type: ignore[import-untyped]
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -53,7 +53,7 @@ class ConfigManager:
         if global_config_path.exists():
             try:
                 with open(global_config_path, "r") as f:
-                    self.global_config = yaml.safe_load(f)
+                    self.global_config = yaml.safe_load(f) or {}
                     self._substitute_env_vars(self.global_config)
                     logger.info(f"Loaded global config from {global_config_path}")
                     logger.debug(f"Global config keys: {list(self.global_config.keys())}")

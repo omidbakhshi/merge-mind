@@ -295,7 +295,7 @@ class MergeRequestHandler:
         """Post review feedback to GitLab"""
 
         # Group results by file and severity
-        file_comments = {}
+        file_comments: Dict[str, List[CodeReviewResult]] = {}
         for result in results:
             if result.file_path not in file_comments:
                 file_comments[result.file_path] = []

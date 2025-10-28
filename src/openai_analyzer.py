@@ -9,7 +9,7 @@ import logging
 import json
 import tiktoken
 from datetime import datetime
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, cast
 from dataclasses import dataclass
 import re
 import asyncio
@@ -523,32 +523,35 @@ Only report actual issues, not stylistic preferences unless they violate project
             "status": "approved",
         }
 
+        statistics = cast(Dict[str, int], summary["statistics"])
+        findings = cast(Dict[str, List[str]], summary["findings"])
+
         for result in results:
             severity = result.severity.lower()
-            if severity in summary["statistics"]:
-                summary["statistics"][severity] += 1
+            if severity in statistics:
+                statistics[severity] += 1
             else:
-                summary["statistics"]["suggestions"] += 1
+                statistics["suggestions"] += 1
 
             finding = f"{result.file_path}: {result.message}"
             if result.line_number:
                 finding = f"{result.file_path}:{result.line_number} - {result.message}"
 
-            if severity in summary["findings"]:
-                summary["findings"][severity].append(finding)
+            if severity in findings:
+                findings[severity].append(finding)
 
         # Determine overall status
-        if summary["statistics"]["critical"] > 0:
+        if statistics["critical"] > 0:
             summary["status"] = "needs_work"
             summary[
                 "overall_assessment"
             ] = "Critical issues found that must be addressed before merging."
-        elif summary["statistics"]["major"] > 2:
+        elif statistics["major"] > 2:
             summary["status"] = "needs_work"
             summary[
                 "overall_assessment"
             ] = "Multiple major issues found. Please review and address them."
-        elif summary["statistics"]["major"] > 0:
+        elif statistics["major"] > 0:
             summary["status"] = "conditional"
             summary[
                 "overall_assessment"

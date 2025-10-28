@@ -72,7 +72,7 @@ class GitLabClient:
         try:
             self.gl.auth()
             self.current_user = self.gl.user
-            logger.info(f"Successfully authenticated as {self.current_user.username}")
+            logger.info(f"Successfully authenticated as {self.current_user.username}")  # type: ignore[union-attr]
         except Exception as e:
             logger.error(f"Failed to authenticate with GitLab: {e}")
             raise
@@ -352,7 +352,7 @@ class GitLabClient:
 
             for note in notes:
                 if (
-                    note.author["username"] == self.current_user.username
+                    note.author["username"] == self.current_user.username  # type: ignore[union-attr]
                     and "## 🔍 AI Code Review Summary" in note.body
                 ):
                     return note.id
@@ -377,11 +377,11 @@ class GitLabClient:
             discussions = mr.discussions.list(get_all=True)
             for discussion in discussions:
                 for note in discussion.notes:
-                    if note["author"][
+                    if                     note["author"][
                         "username"
                     ] == self.current_user.username and self.BOT_SIGNATURE in note.get(
                         "body", ""
-                    ):
+                    ):  # type: ignore[union-attr]
                         bot_comments.append(
                             {
                                 "id": note["id"],

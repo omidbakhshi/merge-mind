@@ -7,7 +7,7 @@ Location: src/vector_store.py
 
 import logging
 import hashlib
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast, Union
 from abc import ABC, abstractmethod
 from datetime import datetime
 
@@ -231,6 +231,8 @@ class QdrantStore(VectorStoreBase):
             # Format results
             formatted_results = []
             for hit in search_result:
+                if hit.payload is None:
+                    continue
                 formatted_results.append(
                     {
                         "id": hit.id,
@@ -348,7 +350,7 @@ class CodeMemoryManager:
         logger.info(f"Included extensions: {included_extensions}")
         logger.info(f"Excluded paths: {excluded_paths}")
 
-        stats = {
+        stats: Dict[str, Union[int, List[str]]] = {
             "files_processed": 0,
             "files_skipped": 0,
             "total_chunks": 0,
