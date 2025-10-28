@@ -24,9 +24,10 @@ RUN apk add --no-cache gettext
 # Copy built app to nginx
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration template
+# Create templates directory and copy nginx configuration template
+RUN mkdir -p /etc/nginx/templates
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE ${PORT:-3000}
+EXPOSE 3000
 
-CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
+CMD ["nginx", "-g", "daemon off;"]
