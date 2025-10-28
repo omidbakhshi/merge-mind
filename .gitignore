@@ -71,6 +71,12 @@ venv/
 ENV/
 env/
 
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Docker (if needed, but usually committed)
 # .dockerignore is committed, but volumes can be ignored if local
 # docker-compose.override.yml (if local overrides)
