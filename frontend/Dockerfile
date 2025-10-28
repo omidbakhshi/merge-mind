@@ -18,12 +18,15 @@ RUN npm run build
 # Production stage
 FROM nginx:alpine
 
+# Install envsubst
+RUN apk add --no-cache gettext
+
 # Copy built app to nginx
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration template
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
-EXPOSE 80
+EXPOSE ${PORT:-3000}
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["/bin/sh", "-c", "envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
