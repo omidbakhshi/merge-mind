@@ -64,6 +64,23 @@ services:
           cpus: '1'
           memory: 2G
 
+  # Frontend Dashboard
+  dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: merge-mind-dashboard
+    environment:
+      REACT_APP_API_URL: http://ai-reviewer:8080
+      REACT_APP_API_TOKEN: ${API_AUTH_TOKEN}
+    ports:
+      - "3000:80"
+    depends_on:
+      - ai-reviewer
+    networks:
+      - gitlab-network
+    restart: unless-stopped
+
   # Optional: Qdrant as separate service for production
   qdrant:
     image: qdrant/qdrant:latest
