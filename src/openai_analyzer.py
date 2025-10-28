@@ -93,6 +93,17 @@ class OpenAIAnalyzer:
         self.executor = ThreadPoolExecutor(max_workers=5)
         self.review_cache: Dict[str, List[CodeReviewResult]] = {}
 
+    def update_model(self, new_model: str) -> None:
+        """Update the model used for analysis
+
+        Args:
+            new_model: New OpenAI model to use
+        """
+        logger.info(f"Updating OpenAI model from {self.model} to {new_model}")
+        self.model = new_model
+        self.encoding = tiktoken.encoding_for_model(new_model)
+        logger.info(f"OpenAI model updated successfully to {new_model}")
+
         # Performance optimizations
         self._embedding_cache: Dict[str, List[float]] = {}
         self._embedding_cache_max_size = 500

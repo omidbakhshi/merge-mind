@@ -171,7 +171,34 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxx
 GITLAB_WEBHOOK_SECRET=your-secret
 SERVER_PORT=8080
 LOG_LEVEL=INFO
+OPENAI_MODEL=gpt-4-turbo-preview  # Supports hot reload
 ```
+
+### Hot Reload Configuration
+
+The service supports **hot reloading** of configuration without restart:
+
+```bash
+# Change OpenAI model dynamically
+export OPENAI_MODEL=gpt-4
+curl -X POST http://localhost:8080/reload
+
+# Response will show configuration changes
+{
+  "success": true,
+  "message": "Configuration reloaded successfully. 1 changes applied.",
+  "changes": {
+    "openai_model": {
+      "old": "gpt-4-turbo-preview",
+      "new": "gpt-4"
+    }
+  }
+}
+```
+
+**Supported hot reload settings:**
+- `OPENAI_MODEL` - Change AI model for code reviews
+- All other configuration changes require service restart
 
 ### Personal Access Token Permissions
 

@@ -282,3 +282,4 @@ class TestIntegration:
 
         # Verify calls were made (in real implementation, second call might be cached)
         assert mock_analyzer.analyze_merge_request.call_count >= 1
+

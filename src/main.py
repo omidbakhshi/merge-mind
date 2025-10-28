@@ -97,6 +97,13 @@ class StatsResponse(BaseModel):
     cache_size: int = Field(..., description="Size of review cache")
 
 
+class ReloadResponse(BaseModel):
+    """Response model for configuration reload"""
+    success: bool = Field(..., description="Whether reload was successful")
+    message: str = Field(..., description="Reload status message")
+    changes: Dict[str, Any] = Field(default_factory=dict, description="Configuration changes detected")
+
+
 class GitLabReviewerApp:
     """Main application class"""
 
@@ -436,6 +443,43 @@ class GitLabReviewerApp:
                 },
                 "timestamp": datetime.now().isoformat(),
             }
+
+        @app.post("/reload", response_model=ReloadResponse)
+        async def reload_configuration():
+            """Reload configuration from environment variables"""
+            try:
+                # Store old configuration for comparison
+                old_model = self.config_manager.get_global_setting("openai", "model")
+
+                # Reload configuration
+                self.config_manager.reload()
+
+                # Get new configuration
+                new_model = self.config_manager.get_global_setting("openai", "model")
+
+                # Update analyzer model if changed
+                changes = {}
+                if old_model != new_model:
+                    self.analyzer.update_model(new_model)
+                    changes["openai_model"] = {"old": old_model, "new": new_model}
+
+                message = f"Configuration reloaded successfully. {len(changes)} changes applied."
+                logger.info(message)
+
+                return ReloadResponse(
+                    success=True,
+                    message=message,
+                    changes=changes
+                )
+
+            except Exception as e:
+                error_msg = f"Failed to reload configuration: {str(e)}"
+                logger.error(error_msg)
+                return ReloadResponse(
+                    success=False,
+                    message=error_msg,
+                    changes={}
+                )
 
         self.app = app
         return app

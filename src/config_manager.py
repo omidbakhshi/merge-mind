@@ -101,7 +101,7 @@ class ConfigManager:
             },
             "openai": {
                 "api_key": os.getenv("OPENAI_API_KEY", ""),
-                "model": "gpt-4-turbo-preview",
+                "model": os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview"),
                 "max_tokens": 2000,
                 "temperature": 0.3,
             },
