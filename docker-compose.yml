@@ -70,11 +70,11 @@ services:
      context: ./frontend
      dockerfile: Dockerfile
     container_name: merge-mind-dashboard
-     environment:
+    environment:
       REACT_APP_API_URL: http://ai-reviewer:8080
       REACT_APP_API_TOKEN: ${API_AUTH_TOKEN}
       PORT: ${DASHBOARD_PORT:-3000}
-     ports:
+    ports:
       - "${DASHBOARD_PORT:-3000}:${DASHBOARD_PORT:-3000}"
     depends_on:
     - ai-reviewer
