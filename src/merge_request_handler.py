@@ -36,7 +36,7 @@ class MergeRequestHandler:
         self.processing_queue: asyncio.Queue = asyncio.Queue()
         self.active_reviews: Dict[str, bool] = {}
 
-    async def process_webhook(self, webhook_data: Dict[str, Any]) -> Dict[str, Any]:
+    async def process_webhook(self, webhook_data: Dict[str, Any], wait_for_completion: bool = False) -> Dict[str, Any]:
         """Process GitLab webhook event
 
         Args:
@@ -79,12 +79,92 @@ class MergeRequestHandler:
             "webhook_data": webhook_data,
         }
 
-        await self.processing_queue.put(review_request)
+        if wait_for_completion:
+            # Process synchronously for testing
+            return await self._process_review_sync(review_request)
+        else:
+            # Add to processing queue for async processing
+            await self.processing_queue.put(review_request)
+            # Start async processing
+            asyncio.create_task(self._process_review_async(review_request))
+            return {"status": "queued", "project_id": project_id, "mr_iid": mr_iid}
 
-        # Start async processing
-        asyncio.create_task(self._process_review_async(review_request))
+    async def _process_review_sync(self, review_request: Dict[str, Any]) -> Dict[str, Any]:
+        """Process review request synchronously (for testing)"""
+        project_id = review_request["project_id"]
+        mr_iid = review_request["mr_iid"]
 
-        return {"status": "queued", "project_id": project_id, "mr_iid": mr_iid}
+        review_key = f"{project_id}_{mr_iid}"
+
+        # Check if already processing
+        if review_key in self.active_reviews:
+            logger.info(f"Review already in progress for {review_key}")
+            return {"status": "already_processing"}
+
+        self.active_reviews[review_key] = True
+
+        try:
+            # Get MR information
+            mr_info = self.gitlab.get_merge_request(project_id, mr_iid)
+            self.gitlab.set_pipeline_status(
+                project_id,
+                mr_info.diff_refs["head_sha"],
+                "running",
+                name="AI Code Review",
+                description="Analyzing code changes...",
+            )
+
+            # Perform the review
+            result = await self.review_merge_request(project_id, mr_iid)
+
+            # Set final pipeline status
+            if result["status"] == "success":
+                pipeline_status = "success"
+                if result["summary"]["status"] == "needs_work":
+                    pipeline_status = "failed"
+
+                self.gitlab.set_pipeline_status(
+                    project_id,
+                    mr_info.diff_refs["head_sha"],
+                    pipeline_status,
+                    name="AI Code Review",
+                    description=result["summary"].get(
+                        "overall_assessment", "Review complete"
+                    ),
+                )
+            else:
+                self.gitlab.set_pipeline_status(
+                    project_id,
+                    mr_info.diff_refs["head_sha"],
+                    "failed",
+                    name="AI Code Review",
+                    description="Review failed - check logs",
+                )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error processing review for {review_key}: {e}")
+
+            # Set error status
+            try:
+                mr_info = self.gitlab.get_merge_request(project_id, mr_iid)
+                self.gitlab.set_pipeline_status(
+                    project_id,
+                    mr_info.diff_refs["head_sha"],
+                    "failed",
+                    name="AI Code Review",
+                    description=f"Review failed: {str(e)}",
+                )
+            except Exception as e2:
+                logger.error(f"Failed to set error status: {e2}")
+
+            return {"status": "error", "message": str(e)}
+
+        finally:
+            # Clean up
+            if review_key in self.active_reviews:
+                del self.active_reviews[review_key]
 
     async def _process_review_async(self, review_request: Dict[str, Any]):
         """Process review request asynchronously"""

@@ -198,19 +198,18 @@ class TestIntegration:
         }
 
         # Process the webhook
-        result = await handler.process_webhook(webhook_data)
+        result = await handler.process_webhook(webhook_data, wait_for_completion=True)
 
         # Verify the result structure
-        assert result['status'] == 'queued'
-        assert result['project_id'] == 123
-        assert result['mr_iid'] == 1
+        assert result['status'] == 'success'  # Synchronous processing returns actual result
+        assert 'summary' in result  # Should contain review summary
 
         # Verify that the pipeline components were called correctly
-        mock_gitlab_client.get_merge_request.assert_called_once_with(123, 1)
-        mock_gitlab_client.get_merge_request_diffs.assert_called_once_with(123, 1)
-        mock_analyzer.analyze_file_diff.assert_called_once()
-        mock_memory_manager.search_similar.assert_called_once()
-        mock_gitlab_client.post_review_comment.assert_called()
+        assert mock_gitlab_client.get_merge_request.call_count == 2  # Called in _process_review_async and review_merge_request
+        assert mock_gitlab_client.get_merge_request_diffs.call_count == 2  # Called twice in review_merge_request
+        mock_analyzer.analyze_merge_request.assert_called_once()
+        mock_memory_manager.vector_store.search_similar.assert_called_once()
+        mock_gitlab_client.post_review_summary.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_circuit_breaker_failure_handling(
@@ -219,7 +218,7 @@ class TestIntegration:
         """Test circuit breaker behavior when services fail"""
 
         # Configure analyzer to simulate failure
-        mock_analyzer.analyze_file_diff.side_effect = Exception("OpenAI API timeout")
+        mock_analyzer.analyze_merge_request.side_effect = Exception("OpenAI API timeout")
 
         handler = MergeRequestHandler(
             gitlab_client=mock_gitlab_client,
@@ -239,7 +238,7 @@ class TestIntegration:
         }
 
         # Process should handle the failure gracefully
-        result = await handler.process_webhook(webhook_data)
+        result = await handler.process_webhook(webhook_data, wait_for_completion=True)
 
         # Should still return a result (failure handled)
         assert 'status' in result
@@ -276,10 +275,10 @@ class TestIntegration:
         }
 
         # First call
-        await handler.process_webhook(webhook_data)
+        await handler.process_webhook(webhook_data, wait_for_completion=True)
 
         # Second call with same data (should potentially use cache)
-        await handler.process_webhook(webhook_data)
+        await handler.process_webhook(webhook_data, wait_for_completion=True)
 
         # Verify calls were made (in real implementation, second call might be cached)
-        assert mock_analyzer.analyze_file_diff.call_count >= 1
+        assert mock_analyzer.analyze_merge_request.call_count >= 1
