@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.config_manager import ConfigManager
 from src.gitlab_client import GitLabClient
-from src.vector_store import ChromaDBStore, CodeMemoryManager
+from src.vector_store import QdrantStore, CodeMemoryManager
 
 
 async def learn_project(project_id: int, branch: str = 'main'):
@@ -27,8 +27,9 @@ async def learn_project(project_id: int, branch: str = 'main'):
     )
 
     # Initialize vector store
-    vector_store = ChromaDBStore(
-        path=config.get_global_setting('vector_store', 'path'),
+    vector_store = QdrantStore(
+        host=config.get_global_setting('vector_store', 'qdrant', 'host'),
+        port=config.get_global_setting('vector_store', 'qdrant', 'port'),
         openai_api_key=config.get_global_setting('openai', 'api_key')
     )
 
@@ -49,7 +50,7 @@ async def learn_project(project_id: int, branch: str = 'main'):
         project_id,
         project_config.name,
         branch,
-        file_patterns=project_config.included_extensions
+        included_extensions=project_config.included_extensions
     )
 
     print(f"\n✅ Learning complete!")
