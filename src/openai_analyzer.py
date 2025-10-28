@@ -104,6 +104,17 @@ class OpenAIAnalyzer:
         self.encoding = tiktoken.encoding_for_model(new_model)
         logger.info(f"OpenAI model updated successfully to {new_model}")
 
+    def update_api_key(self, new_api_key: str) -> None:
+        """Update the OpenAI API key
+
+        Args:
+            new_api_key: New OpenAI API key
+        """
+        logger.info("Updating OpenAI API key")
+        self.api_key = new_api_key
+        openai.api_key = new_api_key
+        logger.info("OpenAI API key updated successfully")
+
         # Performance optimizations
         self._embedding_cache: Dict[str, List[float]] = {}
         self._embedding_cache_max_size = 500

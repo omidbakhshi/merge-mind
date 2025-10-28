@@ -449,19 +449,39 @@ class GitLabReviewerApp:
             """Reload configuration from environment variables"""
             try:
                 # Store old configuration for comparison
-                old_model = self.config_manager.get_global_setting("openai", "model")
+                old_config = {
+                    "openai_model": self.config_manager.get_global_setting("openai", "model"),
+                    "openai_api_key": self.config_manager.get_global_setting("openai", "api_key"),
+                    "webhook_secret": self.config_manager.get_global_setting("gitlab", "webhook_secret"),
+                }
 
                 # Reload configuration
-                self.config_manager.reload()
+                config_changes = self.config_manager.reload()
 
                 # Get new configuration
-                new_model = self.config_manager.get_global_setting("openai", "model")
+                new_config = {
+                    "openai_model": self.config_manager.get_global_setting("openai", "model"),
+                    "openai_api_key": self.config_manager.get_global_setting("openai", "api_key"),
+                    "webhook_secret": self.config_manager.get_global_setting("gitlab", "webhook_secret"),
+                }
 
-                # Update analyzer model if changed
+                # Update analyzer for hot-reloadable changes
                 changes = {}
-                if old_model != new_model:
-                    self.analyzer.update_model(new_model)
-                    changes["openai_model"] = {"old": old_model, "new": new_model}
+                if old_config["openai_model"] != new_config["openai_model"]:
+                    self.analyzer.update_model(new_config["openai_model"])
+                    changes["openai_model"] = {"old": old_config["openai_model"], "new": new_config["openai_model"]}
+
+                if old_config["openai_api_key"] != new_config["openai_api_key"]:
+                    self.analyzer.update_api_key(new_config["openai_api_key"])
+                    changes["openai_api_key"] = {"old": "***", "new": "***"}  # Don't log actual API keys
+
+                if old_config["webhook_secret"] != new_config["webhook_secret"]:
+                    changes["webhook_secret"] = {"old": "***", "new": "***"}  # Don't log secrets
+
+                # Add any other detected changes
+                for key, change in config_changes.items():
+                    if key not in ["openai.model", "openai.api_key", "gitlab.webhook_secret"]:
+                        changes[key] = change
 
                 message = f"Configuration reloaded successfully. {len(changes)} changes applied."
                 logger.info(message)

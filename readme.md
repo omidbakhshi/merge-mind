@@ -183,14 +183,26 @@ The service supports **hot reloading** of configuration without restart:
 export OPENAI_MODEL=gpt-4
 curl -X POST http://localhost:8080/reload
 
+# Change OpenAI API key
+export OPENAI_API_KEY=sk-new-key-here
+curl -X POST http://localhost:8080/reload
+
+# Change webhook secret
+export GITLAB_WEBHOOK_SECRET=new-secret
+curl -X POST http://localhost:8080/reload
+
 # Response will show configuration changes
 {
   "success": true,
-  "message": "Configuration reloaded successfully. 1 changes applied.",
+  "message": "Configuration reloaded successfully. 2 changes applied.",
   "changes": {
     "openai_model": {
       "old": "gpt-4-turbo-preview",
       "new": "gpt-4"
+    },
+    "openai_api_key": {
+      "old": "***",
+      "new": "***"
     }
   }
 }
@@ -198,7 +210,14 @@ curl -X POST http://localhost:8080/reload
 
 **Supported hot reload settings:**
 - `OPENAI_MODEL` - Change AI model for code reviews
-- All other configuration changes require service restart
+- `OPENAI_API_KEY` - Update OpenAI API key (use with caution)
+- `GITLAB_WEBHOOK_SECRET` - Update webhook validation secret
+
+**Settings requiring service restart:**
+- `GITLAB_URL`, `GITLAB_TOKEN` - GitLab connection settings
+- `SERVER_HOST`, `SERVER_PORT`, `SERVER_WORKERS` - Server configuration
+- `API_AUTH_TOKEN` - API authentication
+- Vector store configuration (`PINECONE_*`, etc.)
 
 ### Personal Access Token Permissions
 

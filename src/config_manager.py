@@ -205,9 +205,53 @@ Consider: Time complexity, memory usage, database queries, caching opportunities
         return default_prompts.get(prompt_type, default_prompts["code_review"])
 
     def reload(self):
-        """Reload configuration files"""
-        logger.info("Reloading configuration files...")
-        self.load_configurations()
+        """Reload configuration from environment variables (hot reload)"""
+        logger.info("Reloading configuration from environment variables...")
+
+        # Store old values for comparison
+        old_config = self.global_config.copy()
+
+        # Reload environment-based configuration
+        self._load_env_config()
+
+        # Log changes
+        changes = self._detect_config_changes(old_config, self.global_config)
+        if changes:
+            logger.info(f"Configuration reloaded with {len(changes)} changes: {list(changes.keys())}")
+        else:
+            logger.info("Configuration reloaded - no changes detected")
+
+        return changes
+
+    def _load_env_config(self):
+        """Load configuration from environment variables"""
+        # Reload OpenAI settings (hot reloadable)
+        self.global_config["openai"]["api_key"] = os.getenv("OPENAI_API_KEY", "")
+        self.global_config["openai"]["model"] = os.getenv("OPENAI_MODEL", "gpt-4-turbo-preview")
+
+        # Reload GitLab webhook secret (hot reloadable)
+        self.global_config["gitlab"]["webhook_secret"] = os.getenv("GITLAB_WEBHOOK_SECRET", "")
+
+    def _detect_config_changes(self, old_config, new_config):
+        """Detect changes between old and new configuration"""
+        changes = {}
+
+        def compare_dict(old_dict, new_dict, path=""):
+            for key in set(old_dict.keys()) | set(new_dict.keys()):
+                current_path = f"{path}.{key}" if path else key
+
+                if key not in old_dict:
+                    changes[current_path] = {"old": None, "new": new_dict[key]}
+                elif key not in new_dict:
+                    changes[current_path] = {"old": old_dict[key], "new": None}
+                elif old_dict[key] != new_dict[key]:
+                    if isinstance(old_dict[key], dict) and isinstance(new_dict[key], dict):
+                        compare_dict(old_dict[key], new_dict[key], current_path)
+                    else:
+                        changes[current_path] = {"old": old_dict[key], "new": new_dict[key]}
+
+        compare_dict(old_config, new_config)
+        return changes
 
 
 # Example configuration files content
