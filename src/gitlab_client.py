@@ -377,11 +377,8 @@ class GitLabClient:
             discussions = mr.discussions.list(get_all=True)
             for discussion in discussions:
                 for note in discussion.notes:
-                    if                     note["author"][
-                        "username"
-                    ] == self.current_user.username and self.BOT_SIGNATURE in note.get(
-                        "body", ""
-                    ):  # type: ignore[union-attr]
+                    if (note["author"]["username"] == self.current_user.username  # type: ignore[union-attr]
+                        and self.BOT_SIGNATURE in note.get("body", "")):
                         bot_comments.append(
                             {
                                 "id": note["id"],

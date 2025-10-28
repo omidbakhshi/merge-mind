@@ -130,7 +130,7 @@ class ConfigManager:
 
     def get_global_setting(self, *keys: str, default: Any = None) -> Any:
         """Get a global setting using dot notation"""
-        value = self.global_config
+        value: Any = self.global_config
         for key in keys:
             if isinstance(value, dict):
                 value = value.get(key)

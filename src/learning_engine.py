@@ -6,7 +6,7 @@ Location: src/learning_engine.py
 
 import logging
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, cast
 from datetime import datetime, timedelta
 from dataclasses import dataclass, asdict
 from collections import defaultdict
@@ -602,7 +602,7 @@ class LearningEngine:
     def record_feedback(self, feedback: ReviewFeedback):
         """Record feedback on a review"""
         self.feedback_cache.append(feedback)
-        self.stats["feedback_processed"] += 1
+        self.stats["feedback_processed"] = cast(int, self.stats["feedback_processed"]) + 1
 
         # Adjust patterns based on feedback
         if feedback.feedback_type == "false_positive":

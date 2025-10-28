@@ -7,11 +7,17 @@ Location: src/vector_store.py
 
 import logging
 import hashlib
-from typing import List, Dict, Any, Optional, cast, Union
+from typing import List, Dict, Any, Optional, cast, Union, TypedDict
 from abc import ABC, abstractmethod
 from datetime import datetime
 
 # Vector store backend imports (install as needed)
+
+class LearningStats(TypedDict):
+    files_processed: int
+    files_skipped: int
+    total_chunks: int
+    errors: List[str]
 
 try:
     import openai
@@ -350,7 +356,7 @@ class CodeMemoryManager:
         logger.info(f"Included extensions: {included_extensions}")
         logger.info(f"Excluded paths: {excluded_paths}")
 
-        stats: Dict[str, Union[int, List[str]]] = {
+        stats: Dict[str, Any] = {
             "files_processed": 0,
             "files_skipped": 0,
             "total_chunks": 0,
@@ -458,7 +464,7 @@ class CodeMemoryManager:
             }
 
             logger.info(f"Completed learning from {project_name} in {duration:.2f}s: {stats}")
-            return stats
+            return cast(Dict[str, Any], stats)
 
         except Exception as e:
             logger.error(f"Failed to learn from repository {project_name}: {e}", exc_info=True)
