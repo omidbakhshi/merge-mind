@@ -37,6 +37,7 @@ const Projects: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [formData, setFormData] = useState<Partial<Project>>({
     name: '',
+    description: '',
     review_enabled: true,
     review_drafts: false,
     min_lines_changed: 10,
@@ -69,6 +70,7 @@ const Projects: React.FC = () => {
       setEditingProject(null);
       setFormData({
         name: '',
+        description: '',
         review_enabled: true,
         review_drafts: false,
         min_lines_changed: 10,
@@ -243,6 +245,16 @@ const Projects: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                multiline
+                rows={2}
+              />
+            </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -279,6 +291,30 @@ const Projects: React.FC = () => {
                   />
                 }
                 label="Review Draft MRs"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Included Extensions (comma-separated)"
+                value={formData.included_extensions?.join(', ') || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  included_extensions: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                })}
+                helperText="File extensions to include in reviews (e.g., .py, .js, .ts)"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Excluded Paths (comma-separated)"
+                value={formData.excluded_paths?.join(', ') || ''}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  excluded_paths: e.target.value.split(',').map(s => s.trim()).filter(s => s)
+                })}
+                helperText="Paths to exclude from reviews (e.g., vendor/, node_modules/)"
               />
             </Grid>
           </Grid>
