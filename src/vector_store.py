@@ -90,8 +90,10 @@ class QdrantStore(VectorStoreBase):
         )
 
         # Set up OpenAI for embeddings
+        self.openai_client = None
         if openai_api_key:
             openai.api_key = openai_api_key
+            self.openai_client = openai.OpenAI(api_key=openai_api_key)
 
         # Embedding cache for performance
         self._embedding_cache: Dict[str, List[float]] = {}
@@ -122,6 +124,9 @@ class QdrantStore(VectorStoreBase):
 
     def _generate_embedding(self, text: str) -> List[float]:
         """Generate embedding using OpenAI with caching"""
+        if not self.openai_client:
+            raise ValueError("OpenAI client not initialized")
+
         # Check approximate token count (rough estimate: 1 token ≈ 4 characters)
         approx_tokens = len(text) // 4
         if approx_tokens > 8000:  # Leave some buffer below 8192 limit
