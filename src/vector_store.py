@@ -122,16 +122,20 @@ class QdrantStore(VectorStoreBase):
 
     def _generate_embedding(self, text: str) -> List[float]:
         """Generate embedding using OpenAI with caching"""
-        # Create cache key from text hash
+        # Check approximate token count (rough estimate: 1 token ≈ 4 characters)
+        approx_tokens = len(text) // 4
+        if approx_tokens > 8000:  # Leave some buffer below 8192 limit
+            logger.warning(f"Text too long for embedding ({approx_tokens} tokens), skipping")
+            raise ValueError(f"Text exceeds token limit: {approx_tokens} tokens")
+
         text_hash = hashlib.md5(text.encode()).hexdigest()
 
-        # Check cache first
         if text_hash in self._embedding_cache:
             logger.debug("Using cached embedding")
             return self._embedding_cache[text_hash]
 
         try:
-            response = openai.Embedding.create(
+            response = self.openai_client.embeddings.create(
                 input=text,
                 model="text-embedding-ada-002"
             )
@@ -140,8 +144,7 @@ class QdrantStore(VectorStoreBase):
             # Cache the embedding
             if len(self._embedding_cache) < self._cache_max_size:
                 self._embedding_cache[text_hash] = embedding
-            else:
-                # Remove oldest entry (simple FIFO)
+            elif len(self._embedding_cache) >= self._cache_max_size:
                 oldest_key = next(iter(self._embedding_cache))
                 del self._embedding_cache[oldest_key]
                 self._embedding_cache[text_hash] = embedding
@@ -184,8 +187,12 @@ class QdrantStore(VectorStoreBase):
             for doc in batch:
                 doc_id = doc.get("id") or hashlib.md5(doc["content"].encode()).hexdigest()
 
-                # Generate embedding (with caching)
-                embedding = self._generate_embedding(doc["content"])
+                try:
+                    # Generate embedding (with caching)
+                    embedding = self._generate_embedding(doc["content"])
+                except Exception as e:
+                    logger.warning(f"Skipping document due to embedding failure: {e}")
+                    continue
 
                 # Prepare metadata
                 metadata = doc.get("metadata", {})
@@ -201,6 +208,11 @@ class QdrantStore(VectorStoreBase):
                     }
                 )
                 points.append(point)
+
+            # Skip if no points (all embeddings failed)
+            if not points:
+                logger.debug(f"Skipping empty batch {i//self.max_batch_size + 1}")
+                continue
 
             # Add batch to Qdrant
             try:
