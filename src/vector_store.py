@@ -28,6 +28,13 @@ try:
 except ImportError:
     QDRANT_AVAILABLE = False
 
+try:
+    import chromadb
+
+    CHROMADB_AVAILABLE = True
+except ImportError:
+    CHROMADB_AVAILABLE = False
+
 # Circuit breaker import
 try:
     from src.circuit_breaker import get_qdrant_circuit_breaker, CircuitBreakerOpenException
@@ -320,6 +327,180 @@ class QdrantStore(VectorStoreBase):
         except Exception as e:
             logger.error(f"Failed to get collection stats: {e}")
             return {}
+
+
+class ChromaDBStore(VectorStoreBase):
+    """ChromaDB implementation for vector storage"""
+
+    def __init__(self, path: str = "./storage/vectordb", openai_api_key: Optional[str] = None):
+        if not CHROMADB_AVAILABLE:
+            raise ImportError("ChromaDB is not installed. Run: pip install chromadb")
+
+        self.path = path
+        self.openai_api_key = openai_api_key
+
+        # Initialize ChromaDB client
+        self.client = chromadb.PersistentClient(path=path)
+
+        # Set up OpenAI for embeddings
+        if openai_api_key:
+            openai.api_key = openai_api_key
+
+        # Embedding cache for performance
+        self._embedding_cache: Dict[str, List[float]] = {}
+        self._cache_max_size = 1000
+
+        logger.info(f"Initialized ChromaDB store at {path}")
+
+    async def initialize(self, collection_name: str):
+        """Initialize or get a collection"""
+        try:
+            # Get or create collection
+            self.collection = self.client.get_or_create_collection(
+                name=collection_name,
+                metadata={"hnsw:space": "cosine"}
+            )
+            logger.info(f"Initialized collection: {collection_name}")
+        except Exception as e:
+            logger.error(f"Failed to initialize collection {collection_name}: {e}")
+
+    async def add_documents(self, documents: List[Dict], collection_name: str):
+        """Add documents to the vector store"""
+        if CIRCUIT_BREAKER_AVAILABLE:
+            circuit_breaker = get_qdrant_circuit_breaker()  # Reuse qdrant circuit breaker for simplicity
+            try:
+                await circuit_breaker.call(self._add_documents_direct, documents, collection_name)
+            except CircuitBreakerOpenException as e:
+                logger.error(f"ChromaDB circuit breaker is OPEN: {e}")
+                raise Exception("Vector store is temporarily unavailable. Please try again later.")
+        else:
+            await self._add_documents_direct(documents, collection_name)
+
+    async def _add_documents_direct(self, documents: List[Dict], collection_name: str):
+        """Direct document addition"""
+        await self.initialize(collection_name)
+
+        # Process documents
+        ids = []
+        embeddings = []
+        metadatas = []
+        contents = []
+
+        for doc in documents:
+            doc_id = doc.get("id") or hashlib.md5(doc["content"].encode()).hexdigest()
+
+            try:
+                # Generate embedding
+                embedding = self._generate_embedding(doc["content"])
+            except Exception as e:
+                logger.warning(f"Skipping document due to embedding failure: {e}")
+                continue
+
+            # Prepare metadata
+            metadata = doc.get("metadata", {})
+            metadata["added_at"] = datetime.now().isoformat()
+            metadata["content_hash"] = hashlib.md5(doc["content"].encode()).hexdigest()
+
+            ids.append(doc_id)
+            embeddings.append(embedding)
+            metadatas.append(metadata)
+            contents.append(doc["content"])
+
+        # Add to ChromaDB
+        if ids:
+            try:
+                self.collection.add(
+                    ids=ids,
+                    embeddings=embeddings,
+                    metadatas=metadatas,
+                    documents=contents
+                )
+                logger.info(f"Added {len(ids)} documents to {collection_name}")
+            except Exception as e:
+                logger.error(f"Failed to add documents to {collection_name}: {e}")
+                raise
+
+    async def search_similar(self, query: str, collection_name: str, limit: int = 5) -> List[Dict]:
+        """Search for similar documents"""
+        await self.initialize(collection_name)
+
+        try:
+            # Generate query embedding
+            query_embedding = self._generate_embedding(query)
+
+            # Search
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=limit
+            )
+
+            # Format results
+            formatted_results = []
+            if results['ids'] and results['ids'][0]:
+                for i, doc_id in enumerate(results['ids'][0]):
+                    formatted_results.append({
+                        "id": doc_id,
+                        "content": results['documents'][0][i] if results['documents'] else "",
+                        "metadata": results['metadatas'][0][i] if results['metadatas'] else {},
+                        "score": results['distances'][0][i] if results['distances'] else 0
+                    })
+
+            return formatted_results
+
+        except Exception as e:
+            logger.error(f"Failed to search in {collection_name}: {e}")
+            return []
+
+    async def update_document(self, document: Dict, collection_name: str):
+        """Update a document in the vector store"""
+        await self.initialize(collection_name)
+
+        doc_id = document.get("id") or hashlib.md5(document["content"].encode()).hexdigest()
+
+        try:
+            # Generate embedding for new content
+            embedding = self._generate_embedding(document["content"])
+
+            # Prepare metadata
+            metadata = document.get("metadata", {})
+            metadata["updated_at"] = datetime.now().isoformat()
+            metadata["content_hash"] = hashlib.md5(document["content"].encode()).hexdigest()
+
+            # Update in ChromaDB
+            self.collection.update(
+                ids=[doc_id],
+                embeddings=[embedding],
+                metadatas=[metadata],
+                documents=[document["content"]]
+            )
+
+            logger.info(f"Updated document {doc_id} in {collection_name}")
+        except Exception as e:
+            logger.error(f"Failed to update document: {e}")
+            raise
+
+    async def delete_collection(self, collection_name: str):
+        """Delete a collection"""
+        try:
+            self.client.delete_collection(collection_name)
+            logger.info(f"Deleted collection: {collection_name}")
+        except Exception as e:
+            logger.error(f"Failed to delete collection: {e}")
+            raise
+
+    def get_collection_stats(self, collection_name: str) -> Dict[str, Any]:
+        """Get statistics about a collection"""
+        try:
+            count = self.collection.count()
+            return {
+                "name": collection_name,
+                "document_count": count,
+                "metadata": {}
+            }
+        except Exception as e:
+            logger.error(f"Failed to get collection stats: {e}")
+            return {}
+
 
 from pathlib import Path
 
