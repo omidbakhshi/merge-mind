@@ -8,7 +8,7 @@ from typing import Dict, Any, Optional, List
 import uvicorn
 from contextlib import asynccontextmanager
 
-from src.config_manager import ConfigManager
+from src.config_manager import ConfigManager, ProjectConfig
 from src.gitlab_client import GitLabClient
 from src.openai_analyzer import OpenAIAnalyzer
 from src.vector_store import CodeMemoryManager
@@ -97,6 +97,57 @@ class ReloadResponse(BaseModel):
     success: bool = Field(..., description="Whether reload was successful")
     message: str = Field(..., description="Reload status message")
     changes: Dict[str, Any] = Field(default_factory=dict, description="Configuration changes detected")
+
+
+class ProjectResponse(BaseModel):
+    """Response model for project data"""
+    project_id: int = Field(..., description="GitLab project ID")
+    name: str = Field(..., description="Project name")
+    description: Optional[str] = Field(None, description="Project description")
+    review_enabled: bool = Field(True, description="Whether reviews are enabled")
+    review_drafts: bool = Field(False, description="Whether to review draft MRs")
+    min_lines_changed: int = Field(10, description="Minimum lines changed to trigger review")
+    max_files_per_review: int = Field(50, description="Maximum files to review per MR")
+    excluded_paths: List[str] = Field(default_factory=lambda: ["vendor/", "node_modules/", "dist/", "build/"], description="Paths to exclude from review")
+    included_extensions: List[str] = Field(default_factory=lambda: [".py", ".js", ".ts", ".java", ".go", ".rs", ".cpp", ".c"], description="File extensions to include")
+    custom_prompts: Optional[Dict[str, str]] = Field(default_factory=dict, description="Custom review prompts")
+    review_model: Optional[str] = Field(None, description="AI model for reviews")
+    team_preferences: Optional[List[str]] = Field(default_factory=list, description="Team-specific preferences")
+
+
+class ProjectsResponse(BaseModel):
+    """Response model for projects list"""
+    projects: List[ProjectResponse] = Field(default_factory=list, description="List of configured projects")
+
+
+class ReviewHistoryItem(BaseModel):
+    """Model for individual review history item"""
+    id: str = Field(..., description="Unique review identifier")
+    project_id: int = Field(..., description="GitLab project ID")
+    mr_iid: int = Field(..., description="Merge request IID")
+    status: str = Field(..., description="Review status")
+    created_at: str = Field(..., description="Review creation timestamp")
+    completed_at: Optional[str] = Field(None, description="Review completion timestamp")
+    results_count: int = Field(0, description="Number of review results")
+
+
+class ReviewHistoryResponse(BaseModel):
+    """Response model for review history"""
+    reviews: List[ReviewHistoryItem] = Field(default_factory=list, description="List of review history items")
+
+
+class ActiveReviewItem(BaseModel):
+    """Model for active review item"""
+    id: str = Field(..., description="Unique review identifier")
+    project_id: int = Field(..., description="GitLab project ID")
+    mr_iid: int = Field(..., description="Merge request IID")
+    status: str = Field(..., description="Review status")
+    started_at: str = Field(..., description="Review start timestamp")
+
+
+class ActiveReviewsResponse(BaseModel):
+    """Response model for active reviews"""
+    active_reviews: List[ActiveReviewItem] = Field(default_factory=list, description="List of active reviews")
 
 
 class GitLabReviewerApp:
@@ -499,6 +550,154 @@ class GitLabReviewerApp:
                     message=error_msg,
                     changes={}
                 )
+
+        # Project Management Endpoints
+        @app.get("/projects", response_model=ProjectsResponse)
+        async def get_projects():
+            """Get all configured projects"""
+            projects = []
+            for project_id, project_config in self.config_manager.projects.items():
+                projects.append(ProjectResponse(
+                    project_id=project_config.project_id,
+                    name=project_config.name,
+                    description=project_config.description,
+                    review_enabled=project_config.review_enabled,
+                    review_drafts=project_config.review_drafts,
+                    min_lines_changed=project_config.min_lines_changed,
+                    max_files_per_review=project_config.max_files_per_review,
+                    excluded_paths=project_config.excluded_paths,
+                    included_extensions=project_config.included_extensions,
+                    custom_prompts=project_config.custom_prompts,
+                    review_model=project_config.review_model,
+                    team_preferences=project_config.team_preferences,
+                ))
+            return ProjectsResponse(projects=projects)
+
+        @app.get("/projects/{project_id}", response_model=ProjectResponse)
+        async def get_project(project_id: int):
+            """Get a specific project by ID"""
+            project_config = self.config_manager.get_project_config(project_id)
+            if not project_config:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            return ProjectResponse(
+                project_id=project_config.project_id,
+                name=project_config.name,
+                description=project_config.description,
+                review_enabled=project_config.review_enabled,
+                review_drafts=project_config.review_drafts,
+                min_lines_changed=project_config.min_lines_changed,
+                max_files_per_review=project_config.max_files_per_review,
+                excluded_paths=project_config.excluded_paths,
+                included_extensions=project_config.included_extensions,
+                custom_prompts=project_config.custom_prompts,
+                review_model=project_config.review_model,
+                team_preferences=project_config.team_preferences,
+            )
+
+        @app.post("/projects", response_model=ProjectResponse)
+        async def create_project(project: ProjectResponse):
+            """Create a new project configuration"""
+            if project.project_id in self.config_manager.projects:
+                raise HTTPException(status_code=409, detail="Project already exists")
+
+            # Create ProjectConfig from ProjectResponse
+            project_config = ProjectConfig(
+                project_id=project.project_id,
+                name=project.name,
+                description=project.description or "",
+                review_enabled=project.review_enabled,
+                review_drafts=project.review_drafts,
+                min_lines_changed=project.min_lines_changed,
+                max_files_per_review=project.max_files_per_review,
+                excluded_paths=project.excluded_paths,
+                included_extensions=project.included_extensions,
+                custom_prompts=project.custom_prompts or {},
+                review_model=project.review_model or "gpt-4-turbo-preview",
+                team_preferences=project.team_preferences or [],
+            )
+
+            self.config_manager.projects[project.project_id] = project_config
+            logger.info(f"Created project {project.project_id}: {project.name}")
+
+            return project
+
+        @app.put("/projects/{project_id}", response_model=ProjectResponse)
+        async def update_project(project_id: int, updates: ProjectResponse):
+            """Update an existing project configuration"""
+            if project_id != updates.project_id:
+                raise HTTPException(status_code=400, detail="Project ID mismatch")
+
+            if project_id not in self.config_manager.projects:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            # Update the project config
+            project_config = self.config_manager.projects[project_id]
+            project_config.name = updates.name
+            project_config.description = updates.description or ""
+            project_config.review_enabled = updates.review_enabled
+            project_config.review_drafts = updates.review_drafts
+            project_config.min_lines_changed = updates.min_lines_changed
+            project_config.max_files_per_review = updates.max_files_per_review
+            project_config.excluded_paths = updates.excluded_paths
+            project_config.included_extensions = updates.included_extensions
+            project_config.custom_prompts = updates.custom_prompts or {}
+            project_config.review_model = updates.review_model or "gpt-4-turbo-preview"
+            project_config.team_preferences = updates.team_preferences or []
+
+            logger.info(f"Updated project {project_id}: {updates.name}")
+
+            return updates
+
+        @app.delete("/projects/{project_id}")
+        async def delete_project(project_id: int):
+            """Delete a project configuration"""
+            if project_id not in self.config_manager.projects:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            del self.config_manager.projects[project_id]
+            logger.info(f"Deleted project {project_id}")
+
+            return {"message": f"Project {project_id} deleted successfully"}
+
+        # Review Management Endpoints
+        @app.get("/reviews/active", response_model=ActiveReviewsResponse)
+        async def get_active_reviews():
+            """Get all active reviews"""
+            active_reviews = []
+            if self.mr_handler:
+                # Get active review keys and parse them
+                for review_key in self.mr_handler.active_reviews.keys():
+                    try:
+                        # Assuming review_key format is "project_id_mr_iid"
+                        project_id_str, mr_iid_str = review_key.split("_")
+                        project_id = int(project_id_str)
+                        mr_iid = int(mr_iid_str)
+
+                        active_reviews.append(ActiveReviewItem(
+                            id=review_key,
+                            project_id=project_id,
+                            mr_iid=mr_iid,
+                            status="in_progress",
+                            started_at=datetime.now().isoformat(),  # Approximate
+                        ))
+                    except (ValueError, AttributeError):
+                        logger.warning(f"Invalid review key format: {review_key}")
+                        continue
+
+            return ActiveReviewsResponse(active_reviews=active_reviews)
+
+        @app.get("/reviews/history", response_model=ReviewHistoryResponse)
+        async def get_review_history(project_id: Optional[int] = None, limit: int = 10):
+            """Get review history with optional filtering"""
+            # For now, return empty list as we don't have persistent history storage
+            # In a real implementation, this would query a database or metrics store
+            reviews = []
+
+            # If we had metrics data, we could populate this
+            # For now, return empty to avoid errors
+
+            return ReviewHistoryResponse(reviews=reviews)
 
         self.app = app
         return app
