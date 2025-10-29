@@ -329,6 +329,7 @@ class QdrantStore(VectorStoreBase):
             return {}
 
 
+
 class ChromaDBStore(VectorStoreBase):
     """ChromaDB implementation for vector storage"""
 
@@ -351,6 +352,41 @@ class ChromaDBStore(VectorStoreBase):
         self._cache_max_size = 1000
 
         logger.info(f"Initialized ChromaDB store at {path}")
+
+    def _generate_embedding(self, text: str) -> List[float]:
+        """Generate embedding using OpenAI with caching"""
+        # Check approximate token count (rough estimate: 1 token ≈ 4 characters)
+        approx_tokens = len(text) // 4
+        if approx_tokens > 8000:  # Leave some buffer below 8192 limit
+            logger.warning(f"Text too long for embedding ({approx_tokens} tokens), skipping")
+            raise ValueError(f"Text exceeds token limit: {approx_tokens} tokens")
+
+        text_hash = hashlib.md5(text.encode()).hexdigest()
+
+        if text_hash in self._embedding_cache:
+            logger.debug("Using cached embedding")
+            return self._embedding_cache[text_hash]
+
+        try:
+            response = openai.Embedding.create(
+                input=text,
+                model="text-embedding-ada-002"
+            )
+            embedding = response['data'][0]['embedding']
+
+            # Cache the embedding
+            if len(self._embedding_cache) < self._cache_max_size:
+                self._embedding_cache[text_hash] = embedding
+            elif len(self._embedding_cache) >= self._cache_max_size:
+                oldest_key = next(iter(self._embedding_cache))
+                del self._embedding_cache[oldest_key]
+                self._embedding_cache[text_hash] = embedding
+
+            return embedding
+
+        except Exception as e:
+            logger.error(f"Failed to generate embedding: {e}")
+            raise
 
     async def initialize(self, collection_name: str):
         """Initialize or get a collection"""
@@ -451,11 +487,9 @@ class ChromaDBStore(VectorStoreBase):
             logger.error(f"Failed to search in {collection_name}: {e}")
             return []
 
-    async def update_document(self, document: Dict, collection_name: str):
+    async def update_document(self, doc_id: str, document: Dict, collection_name: str):
         """Update a document in the vector store"""
         await self.initialize(collection_name)
-
-        doc_id = document.get("id") or hashlib.md5(document["content"].encode()).hexdigest()
 
         try:
             # Generate embedding for new content
