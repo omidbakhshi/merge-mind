@@ -407,7 +407,7 @@ class CodeMemoryManager:
 
                 try:
                     # Get file content
-                    content = self.gitlab_client.get_file_content(
+                    content = await self.gitlab_client.get_file_content_async(
                         project_id, file_path, branch
                     )
 
