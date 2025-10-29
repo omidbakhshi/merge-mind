@@ -27,7 +27,7 @@ async def learn_project(project_id: int, branch: str = 'main'):
     )
 
     # Initialize vector store
-    vector_store_type = config.get_global_setting('vector_store', 'type', 'qdrant')
+    vector_store_type = config.get_global_setting('vector_store', 'type', 'chromadb')
     openai_api_key = config.get_global_setting('openai', 'api_key')
 
     if vector_store_type == 'qdrant':
