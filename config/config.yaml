@@ -48,9 +48,9 @@ openai:
 
 # Vector Store Configuration
 vector_store:
-  # Type of vector store to use
-  # Options: chromadb, qdrant, pinecone
-  type: qdrant
+   # Type of vector store to use
+   # Options: chromadb, qdrant, pinecone
+   type: chromadb
 
   # Storage path for local vector databases (or URL for remote)
   path: ./storage/vectordb

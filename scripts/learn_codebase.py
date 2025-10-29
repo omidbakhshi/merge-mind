@@ -27,11 +27,24 @@ async def learn_project(project_id: int, branch: str = 'main'):
     )
 
     # Initialize vector store
-    vector_store = QdrantStore(
-        host=config.get_global_setting('vector_store', 'qdrant', 'host'),
-        port=config.get_global_setting('vector_store', 'qdrant', 'port'),
-        openai_api_key=config.get_global_setting('openai', 'api_key')
-    )
+    vector_store_type = config.get_global_setting('vector_store', 'type', 'qdrant')
+    openai_api_key = config.get_global_setting('openai', 'api_key')
+
+    if vector_store_type == 'qdrant':
+        from src.vector_store import QdrantStore
+        vector_store = QdrantStore(
+            host=config.get_global_setting('vector_store', 'qdrant', 'host'),
+            port=config.get_global_setting('vector_store', 'qdrant', 'port'),
+            openai_api_key=openai_api_key
+        )
+    elif vector_store_type == 'chromadb':
+        from src.vector_store import ChromaDBStore
+        vector_store = ChromaDBStore(
+            path=config.get_global_setting('vector_store', 'path', './storage/vectordb'),
+            openai_api_key=openai_api_key
+        )
+    else:
+        raise ValueError(f"Unsupported vector store type: {vector_store_type}")
 
     # Initialize memory manager
     memory_manager = CodeMemoryManager(vector_store, gitlab_client)
