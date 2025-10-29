@@ -20,6 +20,7 @@ class LearningStats(TypedDict):
     errors: List[str]
 
 try:
+    from openai import OpenAI
     import openai
     from qdrant_client import QdrantClient
     from qdrant_client.models import Distance, VectorParams, PointStruct
@@ -92,8 +93,7 @@ class QdrantStore(VectorStoreBase):
         # Set up OpenAI for embeddings
         self.openai_client = None
         if openai_api_key:
-            openai.api_key = openai_api_key
-            self.openai_client = openai.OpenAI(api_key=openai_api_key)
+            self.openai_client = OpenAI(api_key=openai_api_key)
 
         # Embedding cache for performance
         self._embedding_cache: Dict[str, List[float]] = {}
