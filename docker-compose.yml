@@ -24,13 +24,13 @@ services:
       MONITORING_METRICS_ENABLED: true
       MONITORING_HEALTH_CHECK_ENABLED: true
       MONITORING_STATS_ENABLED: true
-       # Circuit Breaker Configuration
-       CIRCUIT_BREAKER_OPENAI_FAILURE_THRESHOLD: 3
-       CIRCUIT_BREAKER_GITLAB_FAILURE_THRESHOLD: 5
-       CIRCUIT_BREAKER_QDRANT_FAILURE_THRESHOLD: 3
+      # Circuit Breaker Configuration
+      CIRCUIT_BREAKER_OPENAI_FAILURE_THRESHOLD: 3
+      CIRCUIT_BREAKER_GITLAB_FAILURE_THRESHOLD: 5
+      CIRCUIT_BREAKER_QDRANT_FAILURE_THRESHOLD: 3
 
-       # Development mode
-       DEV_MODE: ${DEV_MODE:-false}
+      # Development mode
+      DEV_MODE: ${DEV_MODE:-false}
 
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
