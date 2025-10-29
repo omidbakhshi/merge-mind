@@ -24,10 +24,13 @@ services:
       MONITORING_METRICS_ENABLED: true
       MONITORING_HEALTH_CHECK_ENABLED: true
       MONITORING_STATS_ENABLED: true
-      # Circuit Breaker Configuration
-      CIRCUIT_BREAKER_OPENAI_FAILURE_THRESHOLD: 3
-      CIRCUIT_BREAKER_GITLAB_FAILURE_THRESHOLD: 5
-      CIRCUIT_BREAKER_QDRANT_FAILURE_THRESHOLD: 3
+       # Circuit Breaker Configuration
+       CIRCUIT_BREAKER_OPENAI_FAILURE_THRESHOLD: 3
+       CIRCUIT_BREAKER_GITLAB_FAILURE_THRESHOLD: 5
+       CIRCUIT_BREAKER_QDRANT_FAILURE_THRESHOLD: 3
+
+       # Development mode
+       DEV_MODE: ${DEV_MODE:-false}
 
     ports:
       - "${SERVER_PORT:-8080}:${SERVER_PORT:-8080}"
@@ -36,6 +39,9 @@ services:
     volumes:
       # Persistent storage for vector database
       - vectordb_data:/app/storage/vectordb
+
+      # Source code for development (hot reload)
+      - ./src:/app/src:rw
 
       # Configuration files
       - ./config:/app/config:rw
@@ -76,6 +82,10 @@ services:
       PORT: ${DASHBOARD_PORT:-3000}
     ports:
       - "${DASHBOARD_PORT:-3000}:${DASHBOARD_PORT:-3000}"
+    volumes:
+      # Mount source code for hot reloading
+      - ./frontend/src:/app/src:rw
+      - ./frontend/public:/app/public:rw
     depends_on:
       - ai-reviewer
     networks:

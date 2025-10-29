@@ -719,7 +719,8 @@ def main():
     workers = int(os.getenv("SERVER_WORKERS", "1"))  # Changed to 1 to avoid import string requirement
 
     # Run the server
-    uvicorn.run("src.main:app", host=host, port=port, workers=workers, log_level="info")
+    reload_mode = os.getenv("DEV_MODE", "false").lower() == "true"
+    uvicorn.run("src.main:app", host=host, port=port, workers=workers, log_level="info", reload=reload_mode)
 
 
 if __name__ == "__main__":
