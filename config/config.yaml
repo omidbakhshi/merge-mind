@@ -91,7 +91,9 @@ server:
 
   # Allowed CORS origins
   cors_origins:
-    - "*"
+  - "http://localhost:3000"
+  - "http://localhost:3001"
+  - "*"
 
   # API rate limiting
   rate_limit:

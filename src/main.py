@@ -1,8 +1,3 @@
-"""
-Main entry point for Merge Mind service
-Location: src/main.py
-"""
-
 import os
 import logging
 from datetime import datetime
@@ -108,7 +103,7 @@ class GitLabReviewerApp:
     """Main application class"""
 
     def __init__(self):
-        self.config_manager = None
+        self.config_manager = ConfigManager()
         self.gitlab_client = None
         self.analyzer = None
         self.vector_store = None
@@ -199,6 +194,10 @@ class GitLabReviewerApp:
 
     def create_app(self) -> FastAPI:
         """Create FastAPI application"""
+
+        # Initialize config manager early for app setup
+        if self.config_manager is None:
+            self.config_manager = ConfigManager()
 
         @asynccontextmanager
         async def lifespan(app: FastAPI):

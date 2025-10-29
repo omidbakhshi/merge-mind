@@ -67,19 +67,36 @@ services:
   # Frontend Dashboard
   dashboard:
     build:
-     context: ./frontend
-     dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: merge-mind-dashboard
     environment:
-      REACT_APP_API_URL: http://ai-reviewer:8080
+      REACT_APP_API_URL: http://localhost:${NGINX_PORT:-8000}/api  # Points to nginx proxy
       REACT_APP_API_TOKEN: ${API_AUTH_TOKEN}
       PORT: ${DASHBOARD_PORT:-3000}
     ports:
       - "${DASHBOARD_PORT:-3000}:${DASHBOARD_PORT:-3000}"
     depends_on:
-    - ai-reviewer
+      - ai-reviewer
     networks:
-    - gitlab-network
+      - gitlab-network
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: merge-mind-proxy
+    environment:
+      - SERVER_PORT=${SERVER_PORT:-8080}
+      - DASHBOARD_PORT=${DASHBOARD_PORT:-3000}
+    ports:
+      - "${NGINX_PORT:-8000}:80"
+    volumes:
+      - ./docker/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    depends_on:
+      - ai-reviewer
+      - dashboard
+    networks:
+      - gitlab-network
     restart: unless-stopped
 
   # Optional: Qdrant as separate service for production
