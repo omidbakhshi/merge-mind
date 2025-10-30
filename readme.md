@@ -17,23 +17,8 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 - **⚡ Performance Optimized**: Smart caching, async operations, and batch processing
 - **📊 Advanced Monitoring**: Comprehensive metrics, health checks, and performance tracking
 - **🛡️ Enterprise Reliability**: Request validation, structured logging, and graceful degradation
-
-## 🆕 Recent Updates
-
-### v1.2.0 - Enterprise-Grade Reliability & Performance
-- **🔌 Circuit Breaker Protection**: Automatic failure detection and recovery for external APIs (OpenAI, GitLab, Qdrant)
-- **⚡ Performance Optimizations**: Smart caching, async operations, and optimized batch processing
-- **📊 Advanced Monitoring**: Comprehensive metrics collection, health checks, and performance tracking
-- **🛡️ Enhanced Reliability**: Request validation, structured logging, and graceful error handling
-- **📈 CLI Progress Indicators**: Real-time progress bars for long-running operations
-- **🔍 Health Check Endpoints**: Detailed service health monitoring with dependency checks
-
-### v1.1.0 - Qdrant Integration & Local Training
-- **🔄 Vector Store Migration**: Switched from ChromaDB to Qdrant for better performance and scalability
-- **🏠 Local Codebase Training**: New capability to train on local codebases without GitLab API
-- **🐳 Improved Docker Setup**: Enhanced container configuration with automatic Qdrant service
-- **🔧 Configuration Enhancements**: Environment variable substitution and better config validation
-- **🧪 Testing Tools**: Added scripts for verifying training results and search functionality
+- **🔄 Hot Reload Support**: Update AI model and API keys without restarting the service
+- **🎨 Web Dashboard**: Modern React-based dashboard for monitoring and management
 
 ## 📋 Requirements
 
@@ -41,6 +26,7 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 - Self-hosted GitLab instance (12.0+)
 - OpenAI API key
 - Qdrant vector database (included in Docker setup)
+- Docker & Docker Compose (recommended)
 - 4GB+ RAM recommended (8GB+ for large codebases)
 - 10GB+ disk space for vector database
 - Redis (optional, for enhanced caching)
@@ -53,16 +39,9 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 git clone https://github.com/omidbakhshi/merge-mind.git
 cd merge-mind
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
 # Copy and configure environment variables
 cp .env.example .env
-# Edit .env with your values
+# Edit .env with your values (GITLAB_URL, GITLAB_TOKEN, OPENAI_API_KEY)
 ```
 
 ### 2. Configure Your Projects
@@ -71,18 +50,21 @@ cp .env.example .env
 > - `config/projects.yaml` (contains project IDs and settings)
 > - `.env` (contains API keys and secrets)
 > - Use `config/projects.yaml.example` as a template
-> - Store secrets in environment variables or `.env` files (add `.env` to `.gitignore`)
+> - Store secrets in environment variables or `.env` files
 
 #### Option A: Auto-Configure from GitLab (Recommended)
+
 Automatically fetch all your GitLab projects:
 
 ```bash
+# Start containers first
+docker compose up -d
+
 # Run the auto-configuration script
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/fetch_gitlab_projects.py
+docker compose exec ai-reviewer python scripts/fetch_gitlab_projects.py
 
 # Restart containers to load the new configuration
-docker compose -f docker/docker-compose.yml up --build -d
+docker compose up -d --build
 ```
 
 This will:
@@ -91,7 +73,8 @@ This will:
 - Update `config/projects.yaml` automatically
 
 #### Option B: Manual Configuration
-Copy the example configuration and edit `config/projects.yaml`:
+
+Copy the example configuration and edit:
 
 ```bash
 cp config/projects.yaml.example config/projects.yaml
@@ -120,89 +103,101 @@ projects:
 Train the bot on your existing codebase:
 
 #### Option A: Learn from GitLab Repository
+
 ```bash
-python scripts/learn_codebase.py 123 --branch main
+docker compose exec ai-reviewer python scripts/learn_codebase.py 123 --branch main
 ```
 
 #### Option B: Learn from Local Codebase (Recommended)
+
 ```bash
-# Mount your local codebase in Docker
-echo "- /path/to/your/codebase:/app/my_codebase:ro" >> docker/docker-compose.yml
+# Mount your local codebase
+echo "- /path/to/your/codebase:/app/my_codebase:ro" >> docker-compose.yml
 
 # Restart containers
-docker compose -f docker/docker-compose.yml up --build -d
+docker compose up -d --build
 
 # Train on local codebase
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/learn_local_codebase.py my_project /app/my_codebase
+docker compose exec ai-reviewer \
+  python scripts/learn_local_codebase.py my_project /app/my_codebase \
+  --extensions .py .js .ts .java
 ```
 
 ### 4. Run the Service
 
 ```bash
-# Development
-python -m src.main
+# Using Docker Compose (Recommended)
+docker compose up -d
 
-# Production with Docker
-docker compose -f docker/docker-compose.yml up -d
+# View logs
+docker compose logs -f ai-reviewer
+
+# Check health
+curl http://localhost:8080/health
 ```
 
-### 5. Configure GitLab Webhook
+### 5. Access the Dashboard
+
+Open your browser and navigate to:
+- **Dashboard**: `http://localhost:8000` (via Nginx proxy)
+- **API**: `http://localhost:8000/api`
+- **Direct API**: `http://localhost:8080` (if not using proxy)
+
+### 6. Configure GitLab Webhook
 
 In your GitLab project:
-1. Go to Settings → Webhooks
+
+1. Go to **Settings → Webhooks**
 2. Add webhook URL: `http://your-server:8080/webhook`
 3. Secret token: (same as `GITLAB_WEBHOOK_SECRET` in .env)
 4. Select triggers:
-   - Merge request events
-   - Comments (for feedback processing)
+   - ✅ Merge request events
+   - ✅ Comments (for feedback processing)
+5. Click **Add webhook**
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-```bash
-# Required
-GITLAB_URL=https://gitlab.yourcompany.com
-GITLAB_TOKEN=glpat-xxxxxxxxxxxxx  # Personal access token with api scope
-OPENAI_API_KEY=sk-xxxxxxxxxxxxx
+Required settings in `.env`:
 
-# Optional
-GITLAB_WEBHOOK_SECRET=your-secret
+```bash
+# GitLab Configuration
+GITLAB_URL=https://gitlab.yourcompany.com
+GITLAB_TOKEN=glpat-xxxxxxxxxxxxx
+GITLAB_WEBHOOK_SECRET=your-secret-token
+
+# OpenAI Configuration
+OPENAI_API_KEY=sk-xxxxxxxxxxxxx
+OPENAI_MODEL=gpt-4-turbo-preview
+
+# Server Configuration
 SERVER_PORT=8080
+SERVER_WORKERS=4
 LOG_LEVEL=INFO
-OPENAI_MODEL=gpt-4-turbo-preview  # Supports hot reload
+
+# Dashboard
+DASHBOARD_PORT=3000
+NGINX_PORT=8000
 ```
 
 ### Hot Reload Configuration
 
-The service supports **hot reloading** of configuration without restart:
+The service supports **hot reloading** of certain configurations without restart:
 
 ```bash
 # Change OpenAI model dynamically
 export OPENAI_MODEL=gpt-4
 curl -X POST http://localhost:8080/reload
 
-# Change OpenAI API key
-export OPENAI_API_KEY=sk-new-key-here
-curl -X POST http://localhost:8080/reload
-
-# Change webhook secret
-export GITLAB_WEBHOOK_SECRET=new-secret
-curl -X POST http://localhost:8080/reload
-
-# Response will show configuration changes
+# Response shows configuration changes
 {
   "success": true,
-  "message": "Configuration reloaded successfully. 2 changes applied.",
+  "message": "Configuration reloaded successfully. 1 changes applied.",
   "changes": {
     "openai_model": {
       "old": "gpt-4-turbo-preview",
       "new": "gpt-4"
-    },
-    "openai_api_key": {
-      "old": "***",
-      "new": "***"
     }
   }
 }
@@ -210,14 +205,13 @@ curl -X POST http://localhost:8080/reload
 
 **Supported hot reload settings:**
 - `OPENAI_MODEL` - Change AI model for code reviews
-- `OPENAI_API_KEY` - Update OpenAI API key (use with caution)
+- `OPENAI_API_KEY` - Update OpenAI API key
 - `GITLAB_WEBHOOK_SECRET` - Update webhook validation secret
 
 **Settings requiring service restart:**
 - `GITLAB_URL`, `GITLAB_TOKEN` - GitLab connection settings
 - `SERVER_HOST`, `SERVER_PORT`, `SERVER_WORKERS` - Server configuration
-- `API_AUTH_TOKEN` - API authentication
-- Vector store configuration (`PINECONE_*`, etc.)
+- Vector store configuration
 
 ### Personal Access Token Permissions
 
@@ -228,7 +222,7 @@ Create a GitLab personal access token with these scopes:
 
 ### Project Configuration Options
 
-Each project in `config/projects.yaml` (copied from `config/projects.yaml.example`) can have:
+Each project in `config/projects.yaml` can have:
 
 | Option | Description | Default |
 |--------|-------------|---------|
@@ -240,6 +234,8 @@ Each project in `config/projects.yaml` (copied from `config/projects.yaml.exampl
 | `excluded_paths` | Paths to ignore | `['vendor/', 'node_modules/']` |
 | `included_extensions` | File types to review | `['.py', '.js', '.ts', ...]` |
 | `review_model` | OpenAI model to use | `gpt-4-turbo-preview` |
+| `custom_prompts` | Custom review prompts | `{}` |
+| `team_preferences` | Team-specific preferences | `[]` |
 
 ## 🔄 CI/CD Integration
 
@@ -253,7 +249,6 @@ include:
 
 variables:
   AI_REVIEW_ENABLED: "true"
-  AI_REVIEWER_TOKEN: $CI_AI_REVIEWER_TOKEN  # Set in CI/CD variables
 ```
 
 ### Option 2: Direct Integration
@@ -276,31 +271,59 @@ ai_code_review:
 
 ## 📊 API Endpoints
 
+### Core Endpoints
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/webhook` | POST | GitLab webhook receiver |
 | `/review/{project_id}/{mr_iid}` | POST | Manually trigger review |
-| `/learn/{project_id}?branch=main` | POST | Learn from GitLab repository (specify branch) |
+| `/learn/{project_id}?branch=main` | POST | Learn from repository |
+| `/reload` | POST | Reload configuration (hot reload) |
+
+### Monitoring Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
 | `/health` | GET | Basic health check |
-| `/health/detailed` | GET | Detailed health check with dependency status |
+| `/health/detailed` | GET | Detailed health with dependencies |
 | `/stats` | GET | Service statistics |
-| `/metrics` | GET | Comprehensive performance metrics and circuit breaker status |
+| `/metrics` | GET | Comprehensive metrics & circuit breakers |
+
+### Project Management
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/projects` | GET | List all configured projects |
+| `/projects/{id}` | GET | Get specific project |
+| `/projects` | POST | Create new project |
+| `/projects/{id}` | PUT | Update project |
+| `/projects/{id}` | DELETE | Delete project |
+
+### Review Management
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/reviews/active` | GET | Get active reviews |
+| `/reviews/history` | GET | Get review history |
 
 ## 🔌 Circuit Breaker Protection
 
-The service includes automatic circuit breaker protection for all external API calls to prevent cascading failures:
+Automatic circuit breaker protection for all external API calls prevents cascading failures:
 
 ### Circuit Breaker States
+
 - **CLOSED**: Normal operation, requests flow through
 - **OPEN**: Service detected as failing, requests blocked
 - **HALF_OPEN**: Testing if service has recovered
 
 ### Protected Services
+
 - **OpenAI API**: 3 failures → OPEN, 30s recovery timeout
 - **GitLab API**: 5 failures → OPEN, 60s recovery timeout
 - **Qdrant Vector DB**: 3 failures → OPEN, 15s recovery timeout
 
 ### Benefits
+
 - **Zero Downtime**: Automatic failure detection and recovery
 - **Cost Protection**: Prevents wasted API calls to failing services
 - **User Experience**: Graceful error messages instead of timeouts
@@ -308,16 +331,19 @@ The service includes automatic circuit breaker protection for all external API c
 ## ⚡ Performance Optimizations
 
 ### Smart Caching
-- **Embedding Cache**: 500-item LRU cache for OpenAI embeddings (50-70% faster repeated queries)
+
+- **Embedding Cache**: 500-item LRU cache for OpenAI embeddings (50-70% faster)
 - **Review Cache**: Prevents duplicate analysis of identical code changes
 - **Connection Pooling**: Optimized HTTP connections for external APIs
 
 ### Async Operations
+
 - **Concurrent Processing**: Up to 3 simultaneous OpenAI requests
 - **Non-blocking I/O**: Async file operations and API calls
 - **Batch Processing**: Optimized document insertion in configurable batches
 
 ### Resource Management
+
 - **Memory Limits**: Automatic cleanup of old caches and metrics
 - **Connection Limits**: Configurable connection pool sizes
 - **Timeout Controls**: Intelligent timeouts for different operation types
@@ -325,6 +351,7 @@ The service includes automatic circuit breaker protection for all external API c
 ## 📊 Monitoring & Observability
 
 ### Health Checks
+
 ```bash
 # Basic health
 curl http://localhost:8080/health
@@ -334,139 +361,136 @@ curl http://localhost:8080/health/detailed
 ```
 
 ### Performance Metrics
+
 ```bash
 # Comprehensive metrics
 curl http://localhost:8080/metrics
 ```
 
 ### Metrics Tracked
+
 - **Review Performance**: Processing times, success rates, issue detection
 - **Learning Operations**: Training duration, files processed, chunks created
 - **Circuit Breaker Status**: Service health, failure rates, recovery attempts
 - **Cache Performance**: Hit rates, memory usage, eviction counts
 
-## 🛠️ Configuration & Training Scripts
+## 🛠️ Training Scripts
 
 ### Auto-Configure Projects from GitLab
-```bash
-# Automatically fetch all your GitLab projects and create configurations
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/fetch_gitlab_projects.py
 
-# This will update config/projects.yaml with all accessible projects
+```bash
+# Automatically fetch all your GitLab projects
+docker compose exec ai-reviewer python scripts/fetch_gitlab_projects.py
+
+# This updates config/projects.yaml with all accessible projects
 ```
 
 ### Local Codebase Training
+
 ```bash
 # Train on local codebase
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
+docker compose exec ai-reviewer \
   python scripts/learn_local_codebase.py <project_name> <local_path> [options]
 
 # Options:
 # --extensions .py .js .ts    # File extensions to include
-# --help                     # Show help
+
+# Example:
+docker compose exec ai-reviewer \
+  python scripts/learn_local_codebase.py my_api /app/my_codebase \
+  --extensions .py .go .sql
 ```
 
 ### GitLab Repository Training
-```bash
-# Train on GitLab repository (command line)
-python scripts/learn_codebase.py <project_id> --branch <branch>
 
-# Train via API endpoint
-curl -X POST "http://localhost:8080/learn/123?branch=develop"
+```bash
+# Train on GitLab repository
+docker compose exec ai-reviewer \
+  python scripts/learn_codebase.py <project_id> --branch <branch>
+
+# Example:
+docker compose exec ai-reviewer \
+  python scripts/learn_codebase.py 123 --branch develop
+
+# Or via API:
+curl -X POST "http://localhost:8080/learn/123?branch=main"
 ```
 
 ### Testing Training Results
+
 ```bash
 # Test search functionality
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/test_search.py
+docker compose exec ai-reviewer python scripts/test_search.py
 ```
+
+### Local Training Benefits
+
+- No GitLab API rate limits
+- Access to private/local repositories
+- Faster training process
+- Better code context understanding
 
 ## 🧠 Learning and Adaptation
 
 The bot learns in three ways:
 
-1. **Initial Learning**: Analyzes your existing codebase
-    ```bash
-    # From GitLab repository (specify branch)
-    python scripts/learn_codebase.py <project_id> --branch main
-    # Or via API: curl -X POST "http://localhost:8080/learn/123?branch=main"
+### 1. Initial Learning
 
-    # From local codebase (recommended)
-    docker compose -f docker/docker-compose.yml exec ai-reviewer \
-      python scripts/learn_local_codebase.py my_project /path/to/codebase
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Setting up a development environment
-- Code style and testing guidelines
-- Submitting pull requests
-- Reporting issues and requesting features
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- OpenAI for providing the GPT models that power the AI analysis
-- The GitLab community for their excellent API and platform
-- Qdrant for their high-performance vector database
-- All contributors who help improve Merge Mind
-
-2. **Continuous Learning**: Automatically learns from merged MRs
-    - Extracts patterns from successful merges
-    - Updates knowledge base with new code
-
-3. **Feedback Learning**: Adapts based on team feedback
-    - Learns from resolved comments
-    - Adjusts severity based on team responses
-
-### Local Codebase Training
-
-For the best results, train the bot on your local codebase:
+Analyzes your existing codebase to understand patterns:
 
 ```bash
-# 1. Mount your codebase
-echo "- /home/user/my-project:/app/my_codebase:ro" >> docker/docker-compose.yml
+# From GitLab repository
+docker compose exec ai-reviewer \
+  python scripts/learn_codebase.py <project_id> --branch main
 
-# 2. Restart containers
-docker compose -f docker/docker-compose.yml up --build -d
-
-# 3. Train the bot
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/learn_local_codebase.py my_project /app/my_codebase \
-  --extensions .py .js .ts .java
-
-# 4. Verify training worked
-docker compose -f docker/docker-compose.yml exec ai-reviewer \
-  python scripts/test_search.py
+# From local codebase (recommended)
+docker compose exec ai-reviewer \
+  python scripts/learn_local_codebase.py my_project /path/to/codebase
 ```
 
-**Benefits of local training:**
-- No GitLab API rate limits
-- Access to private/local repositories
-- Faster training process
-- Better code context understanding
+### 2. Continuous Learning
+
+Automatically learns from merged MRs:
+- Extracts patterns from successful merges
+- Updates knowledge base with new code
+- Adapts to evolving codebase
+
+### 3. Feedback Learning
+
+Adapts based on team feedback:
+- Learns from resolved comments
+- Adjusts severity based on team responses
+- Improves accuracy over time
 
 ## 🐳 Docker Deployment
 
 ### Using Docker Compose (Recommended)
 
 ```bash
-# Build and start
-docker compose -f docker/docker-compose.yml up -d
+# Build and start all services
+docker compose up -d
 
 # View logs
-docker compose -f docker/docker-compose.yml logs -f ai-reviewer
+docker compose logs -f ai-reviewer
 
-# Stop
-docker compose -f docker/docker-compose.yml down
+# View all service logs
+docker compose logs -f
+
+# Stop services
+docker compose down
+
+# Rebuild after changes
+docker compose up -d --build
 ```
+
+### Services Included
+
+- **ai-reviewer**: Main application service
+- **qdrant**: Vector database for embeddings
+- **dashboard**: React-based web interface
+- **nginx**: Reverse proxy for API and dashboard
+- **prometheus** (optional): Metrics collection
+- **grafana** (optional): Metrics visualization
 
 ### Using Kubernetes
 
@@ -515,65 +539,12 @@ spec:
             cpu: "1"
 ```
 
-## 🔍 Monitoring
-
-### Prometheus Metrics
-
-The service exposes metrics at `/metrics`:
-- `reviews_total` - Total reviews performed
-- `review_duration_seconds` - Review processing time
-- `openai_requests_total` - OpenAI API calls
-- `learning_cycles_total` - Learning cycles completed
-
-### Logging
-
-Logs are written to `logs/` directory and stdout. Configure log level via `LOG_LEVEL` env var.
-
-## 🛠️ Development
-
-### Running Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src --cov-report=html
-
-# Run specific test file
-pytest tests/test_gitlab_client.py
-```
-
-### Code Quality
-
-```bash
-# Format code
-black src/
-
-# Lint
-flake8 src/
-
-# Type checking
-mypy src/
-```
-
-### Adding New Language Support
-
-1. Add language detection in `src/gitlab_client.py`
-2. Add pattern extraction in `src/learning_engine.py`
-3. Add language-specific prompts in `src/openai_analyzer.py`
-
 ## 📈 Performance Tuning
 
 ### Vector Store Configuration
 
 The system uses **Qdrant** as the vector database backend:
 
-- **Qdrant**: High-performance vector database, included in Docker setup
-- **Automatic Setup**: Qdrant service is automatically started with Docker Compose
-- **Persistent Storage**: Vector data persists across container restarts
-
-#### Qdrant Configuration
 ```yaml
 vector_store:
   type: qdrant
@@ -582,6 +553,12 @@ vector_store:
     port: 6333
     collection_size: 1536  # OpenAI Ada-002 embedding dimension
 ```
+
+**Features:**
+- High-performance vector operations
+- Persistent storage across container restarts
+- Automatic setup with Docker Compose
+- Optimized for similarity search
 
 ### OpenAI Model Selection
 
@@ -600,425 +577,197 @@ vector_store:
 ## 🔒 Security Considerations
 
 1. **API Keys**: Never commit keys to version control
+   - Use `.env` files (add to `.gitignore`)
+   - Store in environment variables or secret managers
+
 2. **Network**: Use HTTPS for webhooks in production
+   - Configure SSL/TLS certificates
+   - Use secure webhook secrets
+
 3. **Access Control**: Limit GitLab token permissions
+   - Only grant required scopes
+   - Rotate tokens regularly
+
 4. **Data Privacy**: Vector database contains code snippets
+   - Secure Qdrant with authentication
+   - Limit network access to trusted sources
+
 5. **Rate Limiting**: Implement rate limits for API endpoints
+   - Configured in `config/config.yaml`
+   - Adjust based on your needs
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 **Bot not commenting on MRs:**
-- Check webhook configuration
+- Check webhook configuration in GitLab
 - Verify GitLab token has correct permissions
-- Check logs: `docker compose -f docker/docker-compose.yml logs ai-reviewer`
+- Check logs: `docker compose logs ai-reviewer`
+- Test webhook: `curl -X POST http://your-server:8080/health`
 
 **OpenAI rate limits:**
 - Reduce `max_files_per_review` in config
-- Increase retry delays
-- Consider using multiple API keys
+- Use `gpt-3.5-turbo` for less critical projects
+- Implement request queuing
+- Consider multiple API keys
 
 **High memory usage:**
 - Reduce vector store cache size
 - Limit concurrent reviews
 - Use external vector database
+- Increase Docker memory limits
 
 **Learning not working:**
-- For GitLab learning: Ensure GitLab token can read repository
-- For local learning: Ensure codebase is properly mounted in Docker
-- Check file size limits in config (500KB default)
+- **For GitLab learning**: Ensure token can read repository
+- **For local learning**: Ensure codebase is properly mounted
+- Check file size limits (500KB default)
 - Verify OpenAI API key has embedding access
-- Check Qdrant service is running: `docker compose -f docker/docker-compose.yml logs qdrant`
+- Check Qdrant: `docker compose logs qdrant`
 
-## 📝 License
+**Circuit breaker issues:**
+- Check metrics: `curl http://localhost:8080/metrics`
+- Review circuit breaker states
+- Adjust thresholds in configuration
+- Monitor external service health
 
-MIT License - see LICENSE file
+**Dashboard not loading:**
+- Check nginx logs: `docker compose logs nginx`
+- Verify CORS settings in `config/config.yaml`
+- Ensure all services are running: `docker compose ps`
+- Check network connectivity between services
+
+## 🧪 Testing
+
+### Running Tests
+
+```bash
+# Install development dependencies
+pip install -r requirements.txt
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=src --cov-report=html
+
+# Run specific test file
+pytest tests/test_gitlab_client.py
+
+# Run integration tests
+pytest tests/test_integration.py
+```
+
+### Test Structure
+
+```
+tests/
+├── test_gitlab_client.py      # GitLab API client tests
+├── test_analyzer.py            # OpenAI analyzer tests
+├── test_circuit_breaker.py    # Circuit breaker tests
+├── test_performance.py         # Performance optimization tests
+└── test_integration.py         # End-to-end integration tests
+```
 
 ## 🤝 Contributing
 
+We welcome contributions! Here's how you can help:
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/omidbakhshi/merge-mind.git
+cd merge-mind
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up development environment
+cp .env.example .env
+# Edit .env with your development settings
+```
+
+### Code Quality
+
+```bash
+# Format code
+black src/
+
+# Lint
+flake8 src/
+
+# Type checking
+mypy src/
+```
+
+### Submitting Changes
+
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+3. Make your changes and add tests
+4. Ensure tests pass: `pytest`
+5. Commit changes: `git commit -m 'Add amazing feature'`
+6. Push to branch: `git push origin feature/amazing-feature`
+7. Open a Pull Request
 
-## 💬 Support
+### Adding New Language Support
 
-- Issues: [GitHub Issues](https://github.com/omidbakhshi/merge-mind/issues)
-- Documentation: [Wiki](https://github.com/omidbakhshi/merge-mind/wiki)
-- Email: omid.bakhshi.dev@gmail.com
+1. Add language detection in `src/gitlab_client.py`
+2. Add pattern extraction in `src/learning_engine.py`
+3. Add language-specific prompts in `src/openai_analyzer.py`
+4. Add tests for the new language
+
+
+### Why Support?
+
+Your contributions help:
+- ⚡ **Faster Development**: More time dedicated to new features
+- 🐛 **Bug Fixes**: Quicker response to issues and bugs
+- 📚 **Better Documentation**: Comprehensive guides and tutorials
+- 🎯 **Community Support**: Help other users succeed
+- 🚀 **New Features**: Bring your feature requests to life
+
+### Other Ways to Help
+
+- ⭐ **Star the Repository**: Show your appreciation on GitHub
+- 🐛 **Report Bugs**: Help us identify and fix issues
+- 💡 **Share Ideas**: Suggest new features and improvements
+- 📖 **Improve Docs**: Contribute to documentation
+- 🗣️ **Spread the Word**: Tell others about Merge Mind
+
+Every contribution, no matter how small, makes a difference! Thank you for your support! 🙏
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- OpenAI for GPT models
-- GitLab for the excellent API
-- Qdrant for high-performance vector storage
-- The open source community
+- **OpenAI** for providing the GPT models that power the AI analysis
+- **GitLab** for their excellent API and platform
+- **Qdrant** for their high-performance vector database
+- **FastAPI** for the modern, fast web framework
+- **All contributors** who help improve Merge Mind
+
+## 📞 Support & Contact
+
+### Community
+- [GitHub Issues](https://github.com/omidbakhshi/merge-mind/issues) - Bug reports and feature requests
+- [Discussions](https://github.com/omidbakhshi/merge-mind/discussions) - Questions and community chat
+- [Email](mailto:omid.bakhshi.dev@gmail.com) - Direct support
+
+### Stay Updated
+- Follow on GitHub for updates
+- Star the repository to show your support
+- Watch for release notifications
 
 ---
 
-# Testing Documentation
+**Made with ❤️ by the Merge Mind community**
 
-## tests/test_gitlab_client.py
-
-```python
-"""
-Test suite for GitLab client
-Location: tests/test_gitlab_client.py
-"""
-
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
-from src.gitlab_client import GitLabClient, MergeRequestInfo, FileDiff
-
-
-class TestGitLabClient:
-    """Test GitLab client functionality"""
-    
-    @pytest.fixture
-    def mock_gitlab(self):
-        """Create mock GitLab instance"""
-        with patch('src.gitlab_client.gitlab') as mock:
-            mock_gl = MagicMock()
-            mock_gl.auth.return_value = None
-            mock_gl.user.username = "test_bot"
-            mock.Gitlab.return_value = mock_gl
-            yield mock_gl
-    
-    @pytest.fixture
-    def client(self, mock_gitlab):
-        """Create GitLab client instance"""
-        return GitLabClient("https://gitlab.test.com", "test_token")
-    
-    def test_initialization(self, client):
-        """Test client initialization"""
-        assert client.url == "https://gitlab.test.com"
-        assert client.current_user.username == "test_bot"
-    
-    def test_get_merge_request(self, client, mock_gitlab):
-        """Test fetching merge request"""
-        # Setup mock
-        mock_project = MagicMock()
-        mock_mr = MagicMock()
-        mock_mr.title = "Test MR"
-        mock_mr.description = "Test description"
-        mock_mr.author = {"username": "developer"}
-        mock_mr.source_branch = "feature"
-        mock_mr.target_branch = "main"
-        mock_mr.created_at = "2024-01-01T00:00:00Z"
-        mock_mr.updated_at = "2024-01-02T00:00:00Z"
-        mock_mr.state = "opened"
-        mock_mr.draft = False
-        mock_mr.web_url = "https://gitlab.test.com/project/mr/1"
-        mock_mr.diff_refs = {
-            "base_sha": "abc123",
-            "head_sha": "def456",
-            "start_sha": "ghi789"
-        }
-        
-        mock_project.mergerequests.get.return_value = mock_mr
-        mock_gitlab.projects.get.return_value = mock_project
-        
-        # Test
-        mr_info = client.get_merge_request(1, 1)
-        
-        assert isinstance(mr_info, MergeRequestInfo)
-        assert mr_info.title == "Test MR"
-        assert mr_info.author == "developer"
-        assert mr_info.source_branch == "feature"
-    
-    def test_get_merge_request_diffs(self, client, mock_gitlab):
-        """Test fetching MR diffs"""
-        # Setup mock
-        mock_project = MagicMock()
-        mock_mr = MagicMock()
-        
-        mock_diff = MagicMock()
-        mock_diff.diffs = [
-            {
-                'old_path': 'test.py',
-                'new_path': 'test.py',
-                'diff': '+def test():\n+    pass\n',
-                'new_file': False,
-                'deleted_file': False,
-                'renamed_file': False
-            }
-        ]
-        
-        mock_mr.diffs.list.return_value = [mock_diff]
-        mock_project.mergerequests.get.return_value = mock_mr
-        mock_gitlab.projects.get.return_value = mock_project
-        
-        # Test
-        diffs = client.get_merge_request_diffs(1, 1)
-        
-        assert len(diffs) == 1
-        assert isinstance(diffs[0], FileDiff)
-        assert diffs[0].new_path == 'test.py'
-        assert diffs[0].added_lines == 2
-        assert diffs[0].language == 'python'
-    
-    def test_post_review_comment(self, client, mock_gitlab):
-        """Test posting review comment"""
-        # Setup mock
-        mock_project = MagicMock()
-        mock_mr = MagicMock()
-        mock_mr.diff_refs = {
-            'base_sha': 'abc123',
-            'head_sha': 'def456',
-            'start_sha': 'ghi789'
-        }
-        mock_mr.notes.create.return_value = MagicMock()
-        
-        mock_project.mergerequests.get.return_value = mock_mr
-        mock_gitlab.projects.get.return_value = mock_project
-        
-        # Test general comment
-        result = client.post_review_comment(
-            1, 1, "Test comment", severity="suggestion"
-        )
-        
-        assert result is True
-        mock_mr.notes.create.assert_called_once()
-        
-    def test_language_detection(self, client):
-        """Test file language detection"""
-        assert client._detect_language("test.py") == "python"
-        assert client._detect_language("app.js") == "javascript"
-        assert client._detect_language("main.go") == "go"
-        assert client._detect_language("unknown.xyz") is None
-
-
-@pytest.mark.asyncio
-class TestAsyncOperations:
-    """Test async operations"""
-    
-    async def test_webhook_processing(self):
-        """Test webhook event processing"""
-        from src.merge_request_handler import MergeRequestHandler
-        
-        # Create mocks
-        mock_gitlab = Mock()
-        mock_analyzer = Mock()
-        mock_memory = Mock()
-        mock_config = Mock()
-        
-        handler = MergeRequestHandler(
-            mock_gitlab, mock_analyzer, mock_memory, mock_config
-        )
-        
-        # Test webhook data
-        webhook_data = {
-            'object_kind': 'merge_request',
-            'object_attributes': {
-                'iid': 1,
-                'action': 'open',
-                'draft': False
-            },
-            'project': {
-                'id': 1
-            }
-        }
-        
-        mock_config.get_project_config.return_value = Mock(
-            review_enabled=True,
-            review_drafts=False
-        )
-        
-        result = await handler.process_webhook(webhook_data)
-        
-        assert result['status'] == 'queued'
-        assert result['project_id'] == 1
-        assert result['mr_iid'] == 1
-```
-
-## tests/test_analyzer.py
-
-```python
-"""
-Test suite for OpenAI analyzer
-Location: tests/test_analyzer.py
-"""
-
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-import json
-from src.openai_analyzer import OpenAIAnalyzer, CodeReviewResult, AnalysisContext
-
-
-class TestOpenAIAnalyzer:
-    """Test OpenAI analyzer functionality"""
-    
-    @pytest.fixture
-    def analyzer(self):
-        """Create analyzer instance"""
-        with patch('src.openai_analyzer.openai'):
-            return OpenAIAnalyzer(
-                api_key="test_key",
-                model="gpt-4-turbo-preview",
-                max_tokens=2000
-            )
-    
-    def test_token_counting(self, analyzer):
-        """Test token counting functionality"""
-        text = "This is a test string for counting tokens."
-        token_count = analyzer.count_tokens(text)
-        assert token_count > 0
-        assert isinstance(token_count, int)
-    
-    def test_cache_key_generation(self, analyzer):
-        """Test cache key generation"""
-        file_path = "test.py"
-        diff = "def test():\n    pass"
-        
-        key1 = analyzer._get_cache_key(file_path, diff)
-        key2 = analyzer._get_cache_key(file_path, diff)
-        key3 = analyzer._get_cache_key("other.py", diff)
-        
-        assert key1 == key2  # Same input = same key
-        assert key1 != key3  # Different input = different key
-    
-    @pytest.mark.asyncio
-    async def test_analyze_file_diff(self, analyzer):
-        """Test file diff analysis"""
-        # Mock OpenAI response
-        mock_response = json.dumps({
-            "reviews": [
-                {
-                    "severity": "minor",
-                    "line_number": 10,
-                    "message": "Consider using more descriptive variable names",
-                    "suggestion": "Use 'user_count' instead of 'uc'",
-                    "confidence": 0.8
-                }
-            ],
-            "summary": "Code looks good with minor suggestions"
-        })
-        
-        with patch.object(analyzer, '_call_openai', 
-                         new_callable=AsyncMock) as mock_call:
-            mock_call.return_value = mock_response
-            
-            context = AnalysisContext(
-                project_name="test_project",
-                merge_request_title="Add feature",
-                merge_request_description="New feature",
-                target_branch="main",
-                similar_code_examples=[],
-                project_patterns=[],
-                recent_reviews=[]
-            )
-            
-            results = await analyzer.analyze_file_diff(
-                "test.py",
-                "+def test():\n+    uc = 0\n+    return uc",
-                context,
-                "python"
-            )
-            
-            assert len(results) == 1
-            assert results[0].severity == "minor"
-            assert results[0].line_number == 10
-            assert "variable names" in results[0].message
-    
-    def test_parse_review_response(self, analyzer):
-        """Test parsing of OpenAI responses"""
-        response = json.dumps({
-            "reviews": [
-                {
-                    "severity": "critical",
-                    "line_number": 5,
-                    "message": "SQL injection vulnerability",
-                    "suggestion": "Use parameterized queries",
-                    "confidence": 0.95
-                }
-            ]
-        })
-        
-        results = analyzer._parse_review_response(response, "db.py")
-        
-        assert len(results) == 1
-        assert results[0].severity == "critical"
-        assert results[0].file_path == "db.py"
-        assert "SQL injection" in results[0].message
-    
-    def test_extract_code_chunks(self, analyzer):
-        """Test code chunk extraction from diff"""
-        diff = """
-@@ -1,5 +1,8 @@
- def existing():
-     pass
-
-+def new_function():
-+    x = 1
-+    y = 2
-+    return x + y
-+
-@@ -10,3 +13,6 @@
- class Existing:
-     pass
-+
-+class NewClass:
-+    def __init__(self):
-+        self.value = 0
-"""
-        
-        chunks = analyzer._extract_code_chunks(diff)
-        
-        assert len(chunks) > 0
-        assert "new_function" in chunks[0]
-        assert any("NewClass" in chunk for chunk in chunks)
-```
-
----
-
-# setup.py
-
-```python
-"""
-Setup configuration for Merge Mind
-Location: setup.py
-"""
-
-from setuptools import setup, find_packages
-
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
-
-with open("requirements.txt", "r", encoding="utf-8") as fh:
-    requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
-
-setup(
-    name="merge-mind",
-    version="1.0.0",
-    author="Your Name",
-    author_email="your.email@company.com",
-    description="AI-powered code review assistant for GitLab - Merge Mind",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/yourorg/merge-mind",
-    packages=find_packages(),
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "Topic :: Software Development :: Quality Assurance",
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.11",
-    ],
-    python_requires=">=3.11",
-    install_requires=requirements,
-    entry_points={
-        "console_scripts": [
-            "gitlab-reviewer=src.main:main",
-            "learn-codebase=scripts.learn_codebase:main",
-        ],
-    },
-    include_package_data=True,
-    package_data={
-        "": ["*.yaml", "*.yml", "*.json"],
-    },
-)
-```
+*Happy Reviewing! 🚀*
