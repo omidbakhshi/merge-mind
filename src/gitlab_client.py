@@ -133,8 +133,8 @@ class GitLabClient:
             logger.warning(f"No diffs found for MR {mr_iid}")
             return []
 
-        # Get the latest diff version
-        latest_diff = diffs[0]
+        # Get the latest diff version (full object to access .diffs)
+        latest_diff = mr.diffs.get(diffs[0].id)
         file_diffs = []
 
         for file_diff in latest_diff.diffs:
