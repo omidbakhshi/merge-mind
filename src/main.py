@@ -307,6 +307,11 @@ class GitLabReviewerApp:
                 issues_found = result.get("issues_found", 0)
                 metrics_collector.complete_review(review_id, files_reviewed, issues_found)
 
+                # Ensure required fields are present for ReviewResponse
+                result.setdefault("project_id", project_id)
+                result.setdefault("mr_iid", mr_iid)
+                result.setdefault("started_at", datetime.now().isoformat())
+
                 logger.info(f"Review completed for project {project_id}, MR {mr_iid}")
                 return ReviewResponse(**result)
             except Exception as e:
