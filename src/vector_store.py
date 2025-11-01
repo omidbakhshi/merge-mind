@@ -384,12 +384,19 @@ class ChromaDBStore(VectorStoreBase):
     async def initialize(self, collection_name: str):
         """Initialize or get a collection"""
         try:
-            # Get or create collection
-            self.collection = self.client.get_or_create_collection(
-                name=collection_name,
-                metadata={"hnsw:space": "cosine"}
-            )
-            logger.info(f"Initialized collection: {collection_name}")
+            # Check if collection exists
+            try:
+                existing_collection = self.client.get_collection(collection_name)
+                self.collection = existing_collection
+                count = self.collection.count()
+                logger.info(f"Using existing collection: {collection_name} with {count} documents")
+            except ValueError:
+                # Collection doesn't exist, create it
+                self.collection = self.client.create_collection(
+                    name=collection_name,
+                    metadata={"hnsw:space": "cosine"}
+                )
+                logger.info(f"Created new collection: {collection_name}")
         except Exception as e:
             logger.error(f"Failed to initialize collection {collection_name}: {e}")
 
