@@ -65,7 +65,7 @@ def fetch_all_projects() -> List[Dict[str, Any]]:
                 'included_extensions': [
                     '.py', '.js', '.ts', '.java', '.go', '.rs', '.cpp', '.c',
                     '.cs', '.rb', '.php', '.swift', '.kotlin', '.scala',
-                    '.sql', '.yaml', '.yml', '.json', '.xml', '.html', '.css'
+                    '.sql', '.yaml', '.yml', '.json', '.xml', '.html', '.css', '.vue'
                 ],
                 'review_model': 'gpt-3.5-turbo',  # Use cheaper model by default
                 'custom_prompts': {},
@@ -109,7 +109,7 @@ def update_projects_config(projects: List[Dict[str, Any]]) -> bool:
             'included_extensions': [
                 '.py', '.js', '.ts', '.java', '.go', '.rs', '.cpp', '.c',
                 '.cs', '.rb', '.php', '.swift', '.kotlin', '.scala',
-                '.sql', '.yaml', '.yml', '.json', '.xml', '.html', '.css', '.scss'
+                '.sql', '.yaml', '.yml', '.json', '.xml', '.html', '.css', '.scss', '.vue'
             ],
             'review_model': 'gpt-3.5-turbo'
         }

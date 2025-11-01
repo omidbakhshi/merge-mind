@@ -21,7 +21,7 @@ class ProjectConfig:
     min_lines_changed: int = 1
     max_files_per_review: int = 50
     excluded_paths: List[str] = field(default_factory=lambda: ["vendor/", "node_modules/", "dist/", "build/"])
-    included_extensions: List[str] = field(default_factory=lambda: [".py", ".js", ".ts", ".java", ".go", ".rs", ".cpp", ".c"])
+    included_extensions: List[str] = field(default_factory=lambda: [".py", ".js", ".ts", ".java", ".go", ".rs", ".cpp", ".c", ".vue"])
     custom_prompts: Dict[str, str] = field(default_factory=dict)
     review_model: str = "gpt-4-turbo-preview"
     team_preferences: List[str] = field(default_factory=list)
