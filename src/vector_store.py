@@ -124,7 +124,7 @@ class QdrantStore(VectorStoreBase):
         """Generate embedding using OpenAI with caching"""
         # Check approximate token count (rough estimate: 1 token ≈ 4 characters)
         approx_tokens = len(text) // 4
-        if approx_tokens > 8000:  # Leave some buffer below 8192 limit
+        if approx_tokens > 6000:  # Conservative limit to avoid OpenAI token errors
             logger.warning(f"Text too long for embedding ({approx_tokens} tokens), skipping")
             raise ValueError(f"Text exceeds token limit: {approx_tokens} tokens")
 
@@ -350,7 +350,7 @@ class ChromaDBStore(VectorStoreBase):
         """Generate embedding using OpenAI with caching"""
         # Check approximate token count (rough estimate: 1 token ≈ 4 characters)
         approx_tokens = len(text) // 4
-        if approx_tokens > 8000:  # Leave some buffer below 8192 limit
+        if approx_tokens > 6000:  # Conservative limit to avoid OpenAI token errors
             logger.warning(f"Text too long for embedding ({approx_tokens} tokens), skipping")
             raise ValueError(f"Text exceeds token limit: {approx_tokens} tokens")
 
