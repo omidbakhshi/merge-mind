@@ -264,13 +264,15 @@ class MergeRequestHandler:
             files_to_review = []
             for diff in file_diffs:
                 file_path = diff.new_path or diff.old_path
+                # Allow if has changes or is new/deleted file (even with 0 changes for large/binary files)
+                effective_changes = max(diff.total_changes, 1) if (diff.is_new_file or diff.is_deleted_file) else diff.total_changes
                 is_reviewable = self.config.is_file_reviewable(
-                    project_id, file_path, diff.total_changes
+                    project_id, file_path, effective_changes
                 )
                 if is_reviewable:
                     files_to_review.append(diff)
                 else:
-                    logger.debug(f"File {file_path} not reviewable: changes={diff.total_changes}, ext={file_path.split('.')[-1] if '.' in file_path else 'none'}")
+                    logger.debug(f"File {file_path} not reviewable: changes={diff.total_changes}, effective={effective_changes}, new={diff.is_new_file}, deleted={diff.is_deleted_file}, ext={file_path.split('.')[-1] if '.' in file_path else 'none'}")
 
             if not files_to_review:
                 logger.info(f"No reviewable files in MR {mr_iid}")

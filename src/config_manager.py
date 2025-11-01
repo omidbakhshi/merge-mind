@@ -18,7 +18,7 @@ class ProjectConfig:
     review_enabled: bool = True
     auto_review_on_open: bool = True
     review_drafts: bool = False
-    min_lines_changed: int = 10
+    min_lines_changed: int = 1
     max_files_per_review: int = 50
     excluded_paths: List[str] = field(default_factory=lambda: ["vendor/", "node_modules/", "dist/", "build/"])
     included_extensions: List[str] = field(default_factory=lambda: [".py", ".js", ".ts", ".java", ".go", ".rs", ".cpp", ".c"])
