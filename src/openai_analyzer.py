@@ -46,9 +46,13 @@ class OpenAIAnalyzer:
 
     # Token limits for different models
     MODEL_LIMITS = {
+        "gpt-4o": 128000,
+        "gpt-4o-mini": 128000,
+        "gpt-4-turbo": 128000,
         "gpt-4-turbo-preview": 128000,
         "gpt-4": 8192,
         "gpt-3.5-turbo": 16384,
+        "gpt-5": 150000,
     }
 
     # Review focus areas
