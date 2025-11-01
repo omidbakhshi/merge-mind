@@ -518,10 +518,18 @@ class ChromaDBStore(VectorStoreBase):
     def get_collection_stats(self, collection_name: str) -> Dict[str, Any]:
         """Get statistics about a collection"""
         try:
-            count = self.collection.count()
+            collection = self.client.get_collection(collection_name)
+            count = collection.count()
             return {
                 "name": collection_name,
                 "document_count": count,
+                "metadata": {}
+            }
+        except ValueError:
+            # Collection doesn't exist
+            return {
+                "name": collection_name,
+                "document_count": 0,
                 "metadata": {}
             }
         except Exception as e:
