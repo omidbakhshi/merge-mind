@@ -150,6 +150,23 @@ class ActiveReviewsResponse(BaseModel):
     active_reviews: List[ActiveReviewItem] = Field(default_factory=list, description="List of active reviews")
 
 
+class ProjectLearningStats(BaseModel):
+    """Learning statistics for a single project"""
+    project_id: int = Field(..., description="Project ID")
+    project_name: str = Field(..., description="Project name")
+    collection_name: str = Field(..., description="Vector store collection name")
+    document_count: int = Field(0, description="Number of documents in vector store")
+    last_learning: Optional[Dict[str, Any]] = Field(None, description="Last learning operation details")
+    total_learning_operations: int = Field(0, description="Total learning operations")
+
+
+class AllLearningStatsResponse(BaseModel):
+    """Response model for all learning statistics"""
+    projects: List[ProjectLearningStats] = Field(default_factory=list, description="Learning stats per project")
+    total_documents: int = Field(0, description="Total documents across all projects")
+    total_projects_learned: int = Field(0, description="Number of projects with learned data")
+
+
 class GitLabReviewerApp:
     """Main application class"""
 
@@ -483,21 +500,142 @@ class GitLabReviewerApp:
 
         @app.get("/metrics")
         async def get_metrics():
-            """Get detailed metrics and performance data"""
+            """Get comprehensive metrics including detailed learning statistics"""
             summary_stats = metrics_collector.get_summary_stats()
-            recent_activity = metrics_collector.get_recent_activity(limit=5)
+            recent_activity = metrics_collector.get_recent_activity(limit=10)
             circuit_breaker_stats = circuit_breaker_registry.get_all_stats()
+
+            # Get vector store statistics for each project
+            vector_store_stats = {}
+            if self.vector_store:
+                for project_id, project_config in self.config_manager.projects.items():
+                    collection_name = f"gitlab_code_{project_config.name}"
+                    try:
+                        if hasattr(self.vector_store, 'get_collection_stats'):
+                            stats = self.vector_store.get_collection_stats(collection_name)
+                            if stats:
+                                vector_store_stats[project_config.name] = stats
+                    except Exception as e:
+                        logger.debug(f"Could not get stats for {collection_name}: {e}")
+
+            # Build detailed learning statistics
+            learning_details = {
+                "total_operations": summary_stats.get("total_learning_operations", 0),
+                "successful_operations": summary_stats.get("successful_learning_operations", 0),
+                "failed_operations": summary_stats.get("failed_learning_operations", 0),
+                "average_time_seconds": summary_stats.get("average_learning_time_seconds", 0),
+                "recent_learning": recent_activity.get("recent_learning", []),
+                "vector_store_stats": vector_store_stats
+            }
 
             return {
                 "summary": summary_stats,
-                "recent_activity": recent_activity,
+                "recent_activity": {
+                    "reviews": recent_activity.get("recent_reviews", []),
+                    "learning": recent_activity.get("recent_learning", [])
+                },
+                "learning": learning_details,
                 "circuit_breakers": circuit_breaker_stats,
                 "performance": {
-                    "embedding_cache_size": len(getattr(metrics_collector, '_embedding_cache', {})),
-                    "review_cache_size": len(getattr(metrics_collector, '_review_cache', {})),
+                    "embedding_cache_size": len(getattr(self.analyzer, '_embedding_cache', {})) if self.analyzer else 0,
+                    "review_cache_size": len(self.analyzer.review_cache) if self.analyzer else 0,
+                    "vector_store_collections": len(vector_store_stats)
+                },
+                "projects": {
+                    "configured": len(self.config_manager.projects),
+                    "with_learned_data": len(vector_store_stats)
                 },
                 "timestamp": datetime.now().isoformat(),
             }
+
+        @app.get("/learning/stats", response_model=AllLearningStatsResponse)
+        async def get_learning_stats():
+            """Get detailed learning statistics for all projects"""
+            projects_stats = []
+            total_documents = 0
+
+            # Get recent learning activity from metrics
+            recent_activity = metrics_collector.get_recent_activity(limit=50)
+            learning_by_project = {}
+
+            for learning_op in recent_activity.get("recent_learning", []):
+                project_name = learning_op["project_name"]
+                if project_name not in learning_by_project:
+                    learning_by_project[project_name] = []
+                learning_by_project[project_name].append(learning_op)
+
+            # Get stats for each configured project
+            for project_id, project_config in self.config_manager.projects.items():
+                collection_name = f"gitlab_code_{project_config.name}"
+
+                # Get vector store stats
+                doc_count = 0
+                if self.vector_store and hasattr(self.vector_store, 'get_collection_stats'):
+                    try:
+                        stats = self.vector_store.get_collection_stats(collection_name)
+                        doc_count = stats.get("document_count", 0)
+                    except Exception as e:
+                        logger.debug(f"Could not get stats for {collection_name}: {e}")
+
+                # Get last learning operation
+                last_learning = None
+                project_learning_ops = learning_by_project.get(project_config.name, [])
+                if project_learning_ops:
+                    last_learning = project_learning_ops[0]  # Most recent
+
+                project_stat = ProjectLearningStats(
+                    project_id=project_id,
+                    project_name=project_config.name,
+                    collection_name=collection_name,
+                    document_count=doc_count,
+                    last_learning=last_learning,
+                    total_learning_operations=len(project_learning_ops)
+                )
+
+                projects_stats.append(project_stat)
+                total_documents += doc_count
+
+            return AllLearningStatsResponse(
+                projects=projects_stats,
+                total_documents=total_documents,
+                total_projects_learned=len([p for p in projects_stats if p.document_count > 0])
+            )
+
+        @app.get("/learning/stats/{project_id}", response_model=ProjectLearningStats)
+        async def get_project_learning_stats(project_id: int):
+            """Get learning statistics for a specific project"""
+            project_config = self.config_manager.get_project_config(project_id)
+            if not project_config:
+                raise HTTPException(status_code=404, detail="Project not found")
+
+            collection_name = f"gitlab_code_{project_config.name}"
+
+            # Get vector store stats
+            doc_count = 0
+            if self.vector_store and hasattr(self.vector_store, 'get_collection_stats'):
+                try:
+                    stats = self.vector_store.get_collection_stats(collection_name)
+                    doc_count = stats.get("document_count", 0)
+                except Exception as e:
+                    logger.warning(f"Could not get stats for {collection_name}: {e}")
+
+            # Get learning operations for this project
+            recent_activity = metrics_collector.get_recent_activity(limit=50)
+            project_learning_ops = [
+                op for op in recent_activity.get("recent_learning", [])
+                if op["project_name"] == project_config.name
+            ]
+
+            last_learning = project_learning_ops[0] if project_learning_ops else None
+
+            return ProjectLearningStats(
+                project_id=project_id,
+                project_name=project_config.name,
+                collection_name=collection_name,
+                document_count=doc_count,
+                last_learning=last_learning,
+                total_learning_operations=len(project_learning_ops)
+            )
 
         @app.post("/reload", response_model=ReloadResponse)
         async def reload_configuration():

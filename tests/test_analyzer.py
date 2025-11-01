@@ -1,8 +1,3 @@
-"""
-Test suite for OpenAI analyzer
-Location: tests/test_analyzer.py
-"""
-
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
 import json

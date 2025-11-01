@@ -1,6 +1,4 @@
 # Global configuration for Merge Mind
-# Location: config/config.yaml
-#
 # Note: Sensitive values should use environment variables
 # Format: ${ENV_VAR_NAME} will be replaced with the environment variable value
 

@@ -1,10 +1,3 @@
-# src/vector_store.py
-"""
-Vector store implementation for code embeddings and similarity search
-Supports multiple backends: ChromaDB, Qdrant, Pinecone
-Location: src/vector_store.py
-"""
-
 import logging
 import hashlib
 from typing import List, Dict, Any, Optional, cast, Union, TypedDict

@@ -1,9 +1,3 @@
-"""
-Basic metrics collection for GitLab AI Reviewer
-Tracks review counts, processing times, and system performance
-Location: src/metrics.py
-"""
-
 import logging
 import time
 from typing import Dict, Any, Optional

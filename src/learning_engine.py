@@ -1,9 +1,3 @@
-"""
-Learning engine for continuous improvement based on feedback and merged code
-Tracks patterns, learns from successful merges, and adapts to team preferences
-Location: src/learning_engine.py
-"""
-
 import logging
 import json
 from typing import Dict, List, Any, Optional, cast

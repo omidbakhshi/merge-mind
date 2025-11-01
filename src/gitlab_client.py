@@ -1,9 +1,3 @@
-"""
-GitLab API client for interacting with self-hosted GitLab instances
-Handles MR fetching, commenting, and pipeline integration
-Location: src/gitlab_client.py
-"""
-
 import gitlab
 import logging
 from typing import List, Dict, Any, Optional

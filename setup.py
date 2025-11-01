@@ -1,9 +1,3 @@
-# setup.py
-"""
-Setup configuration for Merge Mind
-Location: setup.py (root directory)
-"""
-
 from setuptools import setup, find_packages
 
 with open("readme.md", "r", encoding="utf-8") as fh:

@@ -1,9 +1,3 @@
-"""
-OpenAI-powered code analysis engine with context-aware review capabilities
-Integrates with vector store for learning from existing codebase
-Location: src/openai_analyzer.py
-"""
-
 import openai
 import logging
 import json

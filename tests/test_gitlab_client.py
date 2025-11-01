@@ -1,8 +1,3 @@
-"""
-Test suite for GitLab client
-Location: tests/test_gitlab_client.py
-"""
-
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime

@@ -1,10 +1,3 @@
-"""
-Integration test suite for Merge Mind
-Location: tests/test_integration.py
-
-Tests the full review pipeline with mocked external services
-"""
-
 import pytest
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 import json

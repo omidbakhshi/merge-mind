@@ -1,9 +1,3 @@
-"""
-Circuit breaker implementation for resilient external API calls
-Prevents cascading failures by temporarily stopping calls to failing services
-Location: src/circuit_breaker.py
-"""
-
 import asyncio
 import logging
 import time

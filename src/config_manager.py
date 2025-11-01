@@ -1,9 +1,3 @@
-"""
-Configuration management for GitLab AI Reviewer
-Handles both global settings and project-specific configurations
-Location: src/config_manager.py
-"""
-
 import os
 import yaml  # type: ignore[import-untyped]
 from typing import Dict, Any, Optional, List

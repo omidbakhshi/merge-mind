@@ -1,10 +1,3 @@
-# src/merge_request_handler.py
-"""
-Merge request processing orchestrator
-Coordinates between GitLab, OpenAI, and Vector Store
-Location: src/merge_request_handler.py
-"""
-
 import logging
 import asyncio
 from typing import Dict, Any, List

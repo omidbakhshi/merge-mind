@@ -1,8 +1,3 @@
-"""
-Test suite for circuit breaker functionality
-Location: tests/test_circuit_breaker.py
-"""
-
 import pytest
 import asyncio
 import time
