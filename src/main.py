@@ -761,6 +761,7 @@ class GitLabReviewerApp:
             )
 
             self.config_manager.projects[project.project_id] = project_config
+            self.config_manager.save_projects()
             logger.info(f"Created project {project.project_id}: {project.name}")
 
             return project
@@ -788,6 +789,9 @@ class GitLabReviewerApp:
             project_config.review_model = updates.review_model or "gpt-4-turbo-preview"
             project_config.team_preferences = updates.team_preferences or []
 
+            # Save the updated configuration to disk
+            self.config_manager.save_projects()
+
             logger.info(f"Updated project {project_id}: {updates.name}")
 
             return updates
@@ -799,6 +803,7 @@ class GitLabReviewerApp:
                 raise HTTPException(status_code=404, detail="Project not found")
 
             del self.config_manager.projects[project_id]
+            self.config_manager.save_projects()
             logger.info(f"Deleted project {project_id}")
 
             return {"message": f"Project {project_id} deleted successfully"}

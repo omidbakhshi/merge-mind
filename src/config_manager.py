@@ -226,6 +226,38 @@ Consider: Time complexity, memory usage, database queries, caching opportunities
         # Reload GitLab webhook secret (hot reloadable)
         self.global_config["gitlab"]["webhook_secret"] = os.getenv("GITLAB_WEBHOOK_SECRET", "")
 
+    def save_projects(self):
+        """Save current projects configuration to YAML file"""
+        projects_config_path = self.config_dir / "projects.yaml"
+        try:
+            # Convert ProjectConfig objects to dicts
+            projects_data = {
+                "projects": [
+                    {
+                        "project_id": p.project_id,
+                        "name": p.name,
+                        "description": p.description,
+                        "review_enabled": p.review_enabled,
+                        "auto_review_on_open": p.auto_review_on_open,
+                        "review_drafts": p.review_drafts,
+                        "min_lines_changed": p.min_lines_changed,
+                        "max_files_per_review": p.max_files_per_review,
+                        "excluded_paths": p.excluded_paths,
+                        "included_extensions": p.included_extensions,
+                        "custom_prompts": p.custom_prompts,
+                        "review_model": p.review_model,
+                        "team_preferences": p.team_preferences,
+                    }
+                    for p in self.projects.values()
+                ]
+            }
+            with open(projects_config_path, "w") as f:
+                yaml.safe_dump(projects_data, f, default_flow_style=False)
+            logger.info(f"Saved projects configuration to {projects_config_path}")
+        except Exception as e:
+            logger.error(f"Failed to save projects configuration: {e}")
+            raise
+
     def _detect_config_changes(self, old_config, new_config):
         """Detect changes between old and new configuration"""
         changes = {}
