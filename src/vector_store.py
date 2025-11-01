@@ -720,7 +720,7 @@ class CodeMemoryManager:
             raise
 
     def _create_code_chunks(
-            self, content: str, file_path: str, chunk_size: int = 50, overlap: int = 10
+            self, content: str, file_path: str, chunk_size: int = 30, overlap: int = 5  # Reduced from 50/10
     ) -> List[str]:
         """Split code into meaningful chunks for embedding"""
         lines = content.split("\n")
@@ -729,8 +729,11 @@ class CodeMemoryManager:
         # Add file header as context
         header = f"File: {file_path}\n"
 
-        # If file is small enough, use whole file
-        if len(lines) < chunk_size:
+        # Calculate max characters per chunk (conservative: ~1500 tokens = ~6000 chars)
+        max_chars_per_chunk = 6000
+
+        # If file is small, use whole file
+        if len(content) < max_chars_per_chunk and len(lines) < 40:
             return [content]
 
         # Split into chunks with overlap
@@ -738,13 +741,21 @@ class CodeMemoryManager:
             chunk_lines = lines[i: i + chunk_size]
             chunk = header + "\n".join(chunk_lines)
 
-            # Ensure chunk doesn't exceed token limit (~4000 characters ≈ 1000 tokens)
-            if len(chunk) > 20000:  # Conservative limit
-                # Further split large chunks
+            # If chunk is still too large, split it further
+            if len(chunk) > max_chars_per_chunk:
+                # Split into smaller sub-chunks
                 sub_chunk_size = chunk_size // 2
                 for j in range(0, len(chunk_lines), sub_chunk_size):
-                    sub_chunk = header + "\n".join(chunk_lines[j:j + sub_chunk_size])
-                    chunks.append(sub_chunk)
+                    sub_chunk_lines = chunk_lines[j:j + sub_chunk_size]
+                    sub_chunk = header + "\n".join(sub_chunk_lines)
+
+                    # Final safety check
+                    if len(sub_chunk) <= max_chars_per_chunk:
+                        chunks.append(sub_chunk)
+                    else:
+                        # If still too large, take only what fits
+                        truncated = sub_chunk[:max_chars_per_chunk]
+                        chunks.append(truncated)
             else:
                 chunks.append(chunk)
 
