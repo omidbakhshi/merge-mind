@@ -10,8 +10,9 @@ services:
       GITLAB_TOKEN: ${GITLAB_TOKEN}
       GITLAB_WEBHOOK_SECRET: ${GITLAB_WEBHOOK_SECRET}
 
-      # OpenAI Configuration
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
+       # OpenAI Configuration
+       OPENAI_API_KEY: ${OPENAI_API_KEY}
+       OPENAI_MODEL: ${OPENAI_MODEL}
 
       # Server Configuration
       SERVER_HOST: ${SERVER_HOST:-0.0.0.0}
