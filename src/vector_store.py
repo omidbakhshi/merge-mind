@@ -611,8 +611,10 @@ class CodeMemoryManager:
 
             documents = []
             processed_count = 0
+            total_items = 0
 
             for item in items:
+                total_items += 1
                 if item["type"] != "blob":
                     continue
 
@@ -694,6 +696,7 @@ class CodeMemoryManager:
 
             # Store learning stats
             duration = (datetime.now() - start_time).total_seconds()
+            logger.info(f"Learning summary for {project_name}: {total_items} items, {processed_count} processed, {stats['files_processed']} files learned, {stats['total_chunks']} chunks, {stats['files_skipped']} skipped")
             self.learning_stats[project_name] = {
                 "learned_at": datetime.now().isoformat(),
                 "stats": stats,
