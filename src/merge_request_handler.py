@@ -383,9 +383,10 @@ class MergeRequestHandler:
             file_comments[result.file_path].append(result)
 
         # Post inline comments for critical, major, and minor issues
+        inline_count = 0
         for file_path, comments in file_comments.items():
             for comment in comments:
-                if comment.severity in ["critical", "major", "minor"]:
+                if comment.severity in ["critical", "major", "minor"] and comment.line_number:
                     # Post inline comment
                     full_comment = comment.message
                     if comment.suggestion:
@@ -393,7 +394,7 @@ class MergeRequestHandler:
                             f"\n\n**Suggestion:**\n```\n{comment.suggestion}\n```"
                         )
 
-                    self.gitlab.post_review_comment(
+                    success = self.gitlab.post_review_comment(
                         project_id,
                         mr_iid,
                         full_comment,
@@ -401,6 +402,24 @@ class MergeRequestHandler:
                         line=comment.line_number,
                         severity=comment.severity,
                     )
+                    if success:
+                        inline_count += 1
+
+        logger.info(f"Posted {inline_count} inline comments for MR {mr_iid}")
+
+        # Post general comments for issues without line numbers
+        general_comments = []
+        for file_path, comments in file_comments.items():
+            for comment in comments:
+                if comment.severity in ["critical", "major", "minor"] and not comment.line_number:
+                    general_comments.append(f"**{comment.severity.upper()}** in {file_path}: {comment.message}")
+                    if comment.suggestion:
+                        general_comments[-1] += f"\nSuggestion: {comment.suggestion}"
+
+        if general_comments:
+            general_body = "Additional review comments:\n\n" + "\n\n".join(general_comments)
+            self.gitlab.post_review_comment(project_id, mr_iid, general_body)
+            logger.info(f"Posted general comment with {len(general_comments)} issues without line numbers")
 
         # Post summary comment
         self.gitlab.post_review_summary(project_id, mr_iid, summary)
