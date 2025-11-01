@@ -48,5 +48,5 @@
   "devDependencies": {
     "@types/jest": "^27.5.0"
   },
-  "proxy": "http://localhost:8080"
+  "proxy": "http://nginx"
 }
