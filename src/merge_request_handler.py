@@ -250,9 +250,11 @@ class MergeRequestHandler:
 
             # Type assertion for mypy
             assert project_config is not None
+            logger.debug(f"Project config: min_lines={project_config.min_lines_changed}, included_ext={project_config.included_extensions}")
 
             # Get file diffs
             file_diffs = self.gitlab.get_merge_request_diffs(project_id, mr_iid)
+            logger.info(f"Found {len(file_diffs)} file diffs for MR {mr_iid}")
 
             if not file_diffs:
                 logger.info(f"No diffs found for MR {mr_iid}")
@@ -261,10 +263,14 @@ class MergeRequestHandler:
             # Filter files based on configuration
             files_to_review = []
             for diff in file_diffs:
-                if self.config.is_file_reviewable(
-                    project_id, diff.new_path or diff.old_path, diff.total_changes
-                ):
+                file_path = diff.new_path or diff.old_path
+                is_reviewable = self.config.is_file_reviewable(
+                    project_id, file_path, diff.total_changes
+                )
+                if is_reviewable:
                     files_to_review.append(diff)
+                else:
+                    logger.debug(f"File {file_path} not reviewable: changes={diff.total_changes}, ext={file_path.split('.')[-1] if '.' in file_path else 'none'}")
 
             if not files_to_review:
                 logger.info(f"No reviewable files in MR {mr_iid}")
