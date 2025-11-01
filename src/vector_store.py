@@ -525,16 +525,18 @@ class ChromaDBStore(VectorStoreBase):
                 "document_count": count,
                 "metadata": {}
             }
-        except ValueError:
-            # Collection doesn't exist
-            return {
-                "name": collection_name,
-                "document_count": 0,
-                "metadata": {}
-            }
         except Exception as e:
-            logger.error(f"Failed to get collection stats: {e}")
-            return {}
+            error_str = str(e)
+            if "does not exist" in error_str:
+                # Collection doesn't exist
+                return {
+                    "name": collection_name,
+                    "document_count": 0,
+                    "metadata": {}
+                }
+            else:
+                logger.error(f"Failed to get collection stats: {e}")
+                return {}
 
 
 from pathlib import Path
