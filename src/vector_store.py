@@ -398,7 +398,7 @@ class ChromaDBStore(VectorStoreBase):
                 self.collection = existing_collection
                 count = self.collection.count()
                 logger.info(f"Using existing collection: {collection_name} with {count} documents")
-            except ValueError:
+            except (ValueError, Exception):
                 # Collection doesn't exist, create it
                 self.collection = self.client.create_collection(
                     name=collection_name,
@@ -407,6 +407,7 @@ class ChromaDBStore(VectorStoreBase):
                 logger.info(f"Created new collection: {collection_name}")
         except Exception as e:
             logger.error(f"Failed to initialize collection {collection_name}: {e}")
+            raise  # Re-raise to prevent using uninitialized collection
 
     async def add_documents(self, documents: List[Dict], collection_name: str):
         """Add documents to the vector store"""
@@ -719,30 +720,33 @@ class CodeMemoryManager:
             raise
 
     def _create_code_chunks(
-        self, content: str, file_path: str, chunk_size: int = 50, overlap: int = 10
+            self, content: str, file_path: str, chunk_size: int = 50, overlap: int = 10
     ) -> List[str]:
-        """Split code into meaningful chunks for embedding
-
-        Args:
-            content: File content
-            file_path: Path to the file
-            chunk_size: Number of lines per chunk
-            overlap: Number of overlapping lines between chunks
-        """
+        """Split code into meaningful chunks for embedding"""
         lines = content.split("\n")
         chunks = []
 
         # Add file header as context
         header = f"File: {file_path}\n"
 
-        for i in range(0, len(lines), chunk_size - overlap):
-            chunk_lines = lines[i : i + chunk_size]
-            chunk = header + "\n".join(chunk_lines)
-            chunks.append(chunk)
+        # If file is small enough, use whole file
+        if len(lines) < chunk_size:
+            return [content]
 
-        # If file is small, just use the whole file
-        if len(chunks) == 1 and len(lines) < 50:
-            chunks = [content]
+        # Split into chunks with overlap
+        for i in range(0, len(lines), chunk_size - overlap):
+            chunk_lines = lines[i: i + chunk_size]
+            chunk = header + "\n".join(chunk_lines)
+
+            # Ensure chunk doesn't exceed token limit (~4000 characters ≈ 1000 tokens)
+            if len(chunk) > 20000:  # Conservative limit
+                # Further split large chunks
+                sub_chunk_size = chunk_size // 2
+                for j in range(0, len(chunk_lines), sub_chunk_size):
+                    sub_chunk = header + "\n".join(chunk_lines[j:j + sub_chunk_size])
+                    chunks.append(sub_chunk)
+            else:
+                chunks.append(chunk)
 
         return chunks
 

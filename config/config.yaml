@@ -65,7 +65,6 @@ vector_store:
   qdrant:
     host: qdrant
     port: 6333
-    collection_size: 1536  # Dimension of embeddings
 
   # Pinecone specific settings (if using Pinecone)
   pinecone:
