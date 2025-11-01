@@ -152,6 +152,10 @@ class QdrantStore(VectorStoreBase):
             return embedding
 
         except Exception as e:
+            error_str = str(e)
+            if "maximum context length" in error_str:
+                logger.warning(f"Text too long for embedding ({error_str}), skipping")
+                raise ValueError(f"Text exceeds token limit: {error_str}")
             logger.error(f"Failed to generate embedding: {e}")
             raise
 
@@ -378,6 +382,10 @@ class ChromaDBStore(VectorStoreBase):
             return embedding
 
         except Exception as e:
+            error_str = str(e)
+            if "maximum context length" in error_str:
+                logger.warning(f"Text too long for embedding ({error_str}), skipping")
+                raise ValueError(f"Text exceeds token limit: {error_str}")
             logger.error(f"Failed to generate embedding: {e}")
             raise
 
