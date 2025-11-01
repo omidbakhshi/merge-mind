@@ -382,10 +382,10 @@ class MergeRequestHandler:
                 file_comments[result.file_path] = []
             file_comments[result.file_path].append(result)
 
-        # Post inline comments for critical and major issues
+        # Post inline comments for critical, major, and minor issues
         for file_path, comments in file_comments.items():
             for comment in comments:
-                if comment.severity in ["critical", "major"]:
+                if comment.severity in ["critical", "major", "minor"]:
                     # Post inline comment
                     full_comment = comment.message
                     if comment.suggestion:
