@@ -47,10 +47,13 @@ class ConfigManager:
         if global_config_path.exists():
             try:
                 with open(global_config_path, "r") as f:
-                    self.global_config = yaml.safe_load(f) or {}
-                    self._substitute_env_vars(self.global_config)
-                    logger.info(f"Loaded global config from {global_config_path}")
-                    logger.debug(f"Global config keys: {list(self.global_config.keys())}")
+                     self.global_config = yaml.safe_load(f) or {}
+                     self._substitute_env_vars(self.global_config)
+                     # Override with environment variables if set
+                     if os.getenv("OPENAI_MODEL"):
+                         self.global_config["openai"]["model"] = os.getenv("OPENAI_MODEL")
+                     logger.info(f"Loaded global config from {global_config_path}")
+                     logger.debug(f"Global config keys: {list(self.global_config.keys())}")
             except Exception as e:
                 logger.error(f"Failed to load global config from {global_config_path}: {e}")
                 raise
