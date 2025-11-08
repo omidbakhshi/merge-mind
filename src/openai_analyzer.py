@@ -265,74 +265,362 @@ class OpenAIAnalyzer:
             return []
 
     def _build_review_prompt(
-        self,
-        file_path: str,
-        diff: str,
-        context: AnalysisContext,
-        similar_code: List[Dict],
-        language: Optional[str],
+            self,
+            file_path: str,
+            diff: str,
+            context: AnalysisContext,
+            similar_code: List[Dict],
+            language: Optional[str],
     ) -> str:
-        """Build a comprehensive review prompt"""
+        """Build a comprehensive, framework-aware review prompt"""
 
-        prompt = f"""You are an expert code reviewer for the {context.project_name} project.
+        # Detect framework/technology
+        framework = self._detect_framework(file_path, diff, language)
 
-Project Context:
-- Merge Request: {context.merge_request_title}
-- Description: {context.merge_request_description}
-- Target Branch: {context.target_branch}
+        prompt = f"""You are an expert code reviewer specializing in {framework or language or 'general'} development for the {context.project_name} project.
 
-File: {file_path}
-Language: {language or 'Unknown'}
+    Project Context:
+    - Merge Request: {context.merge_request_title}
+    - Description: {context.merge_request_description}
+    - Target Branch: {context.target_branch}
+    - File: {file_path}
+    - Language: {language or 'Unknown'}
+    - Framework: {framework or 'Unknown'}
 
-"""
+    """
 
         # Add similar code examples if available
         if similar_code:
-            prompt += "\nSimilar code patterns from this project:\n"
+            prompt += "\n📚 Similar code patterns from this project:\n"
             for idx, example in enumerate(similar_code[:3], 1):
                 prompt += f"\nExample {idx} ({example.get('file', 'unknown')}):\n"
                 prompt += f"```\n{example.get('code', '')[:500]}\n```\n"
 
         # Add project patterns if available
         if context.project_patterns:
-            prompt += "\nProject coding patterns to follow:\n"
+            prompt += "\n🎯 Project coding patterns to follow:\n"
             for pattern in context.project_patterns[:5]:
                 prompt += f"- {pattern}\n"
 
         prompt += f"""
 
-Code Diff to Review:
-```diff
-{diff}
-```
+    📝 Code Diff to Review:
+    ```diff
+    {diff}
+    ```
 
-Please provide a detailed code review focusing on:
-1. Critical issues (bugs, security vulnerabilities)
-2. Major issues (performance problems, design flaws)
-3. Minor issues (code style, naming conventions)
-4. Suggestions for improvement
+    """
 
-For each issue found, provide a JSON response with the following structure:
-{{
-    "reviews": [
-        {{
-            "severity": "critical|major|minor|suggestion",
-            "line_number": null or line number,
-            "message": "Clear description of the issue",
-            "code_snippet": "The problematic code if applicable",
-            "suggestion": "How to fix it",
-            "confidence": 0.0 to 1.0
-        }}
-    ],
-    "summary": "Overall assessment of the changes"
-}}
+        # Add framework-specific review guidelines
+        prompt += self._get_framework_specific_guidelines(framework, language)
 
-Be specific and actionable. Reference line numbers where possible.
-Consider the existing codebase patterns and maintain consistency.
-Only report actual issues, not stylistic preferences unless they violate project standards.
-"""
+        prompt += """
+
+    📋 Review Focus Areas:
+
+    **1. Critical Issues (MUST FIX before merge)**
+       - Security vulnerabilities (SQL injection, XSS, CSRF, authentication bypass)
+       - Data integrity issues (race conditions, data loss, corruption)
+       - Breaking changes (API contract violations, backward compatibility)
+       - Memory leaks or resource exhaustion
+       - Critical performance bottlenecks
+
+    **2. Major Issues (SHOULD FIX)**
+       - Logic errors and bugs
+       - Significant performance problems (N+1 queries, inefficient algorithms)
+       - Poor error handling (unhandled exceptions, silent failures)
+       - Design flaws (tight coupling, violation of SOLID principles)
+       - Missing validation or sanitization
+       - Incorrect async/await usage
+
+    **3. Minor Issues (CONSIDER FIXING)**
+       - Code style violations (inconsistent formatting, naming conventions)
+       - Missing type hints/annotations
+       - Code duplication (DRY violations)
+       - Overly complex code (high cyclomatic complexity)
+       - Missing or inadequate comments for complex logic
+       - Inefficient but functional code
+
+    **4. Suggestions (NICE TO HAVE)**
+       - Refactoring opportunities
+       - Modern language features that could be used
+       - Better abstractions or patterns
+       - Additional test coverage areas
+       - Documentation improvements
+       - Accessibility improvements (for frontend)
+
+    🎯 **Response Format (JSON only):**
+    ```json
+    {
+        "reviews": [
+            {
+                "severity": "critical|major|minor|suggestion",
+                "line_number": <line_number or null>,
+                "message": "Clear, actionable description of the issue",
+                "code_snippet": "The problematic code excerpt",
+                "suggestion": "Specific fix or improvement with code example",
+                "confidence": 0.0-1.0,
+                "reasoning": "Why this is an issue (optional, for complex cases)"
+            }
+        ],
+        "summary": "Overall assessment focusing on: 1) Most critical concerns, 2) Code quality level, 3) Recommendation (approve/needs work)"
+    }
+    ```
+
+    ⚠️ **Important Guidelines:**
+    - Be specific and actionable - provide exact fixes, not vague advice
+    - Reference line numbers when possible
+    - Consider the existing codebase patterns shown above
+    - Prioritize real bugs and security issues over style preferences
+    - Only report actual issues - don't nitpick if code follows project standards
+    - Provide code examples in suggestions when helpful
+    - Consider performance implications at scale
+    - Think about maintainability and future developers
+    - For frontend: consider UX, accessibility, and bundle size
+    - For backend: consider scalability, security, and data integrity
+
+    Start your analysis now:"""
 
         return prompt
+
+    def _detect_framework(self, file_path: str, diff: str, language: Optional[str]) -> Optional[str]:
+        """Detect framework from file path, diff content, and language"""
+
+        file_lower = file_path.lower()
+        diff_lower = diff.lower()
+
+        # PHP/Laravel detection
+        if language == 'php' or file_path.endswith('.php'):
+            if any(keyword in diff_lower for keyword in ['eloquent', 'illuminate\\', 'artisan', 'facade', 'app(']):
+                return 'Laravel'
+            if any(keyword in diff_lower for keyword in ['symfony\\', 'doctrine\\', 'container']):
+                return 'Symfony'
+            return 'PHP'
+
+        # JavaScript/TypeScript framework detection
+        if language in ['javascript', 'typescript'] or file_path.endswith(('.js', '.ts', '.jsx', '.tsx', '.vue')):
+            if 'nuxt' in file_lower or 'pages/' in file_lower or 'layouts/' in file_lower:
+                return 'Nuxt.js'
+            if 'next' in file_lower or any(
+                    keyword in diff_lower for keyword in ['usenext', 'getserversideprops', 'getstaticprops']):
+                return 'Next.js'
+            if '.vue' in file_path or 'vue' in diff_lower:
+                return 'Vue.js'
+            if any(keyword in diff_lower for keyword in ['react', 'usestate', 'useeffect', 'jsx']):
+                return 'React'
+            return 'JavaScript/TypeScript'
+
+        # Python framework detection
+        if language == 'python' or file_path.endswith('.py'):
+            if any(keyword in diff_lower for keyword in ['django.', 'from django', 'models.model']):
+                return 'Django'
+            if any(keyword in diff_lower for keyword in ['flask', '@app.route', 'from flask']):
+                return 'Flask'
+            if any(keyword in diff_lower for keyword in ['fastapi', '@app.get', '@app.post']):
+                return 'FastAPI'
+            return 'Python'
+
+        return None
+
+    def _get_framework_specific_guidelines(self, framework: Optional[str], language: Optional[str]) -> str:
+        """Get framework-specific review guidelines"""
+
+        if framework == 'Laravel':
+            return """
+    🔧 **Laravel-Specific Review Checklist:**
+
+    **Security:**
+    - ✓ Using Eloquent ORM or query builder (not raw queries)
+    - ✓ Input validation with Form Requests or validate()
+    - ✓ CSRF protection on forms (@csrf directive)
+    - ✓ Mass assignment protection ($fillable/$guarded)
+    - ✓ Authorization checks (gates, policies, middleware)
+    - ✓ SQL injection prevention (parameterized queries)
+    - ✓ XSS prevention (blade {{ }} escaping)
+
+    **Best Practices:**
+    - ✓ Following PSR standards (PSR-12 for code style)
+    - ✓ Proper use of service containers and dependency injection
+    - ✓ Route model binding when applicable
+    - ✓ Eloquent relationships properly defined
+    - ✓ Avoiding N+1 queries (use eager loading with())
+    - ✓ Using collections efficiently (avoid loading all records)
+    - ✓ Proper transaction handling for data integrity
+    - ✓ Queue long-running tasks (don't block HTTP requests)
+    - ✓ Using Laravel helpers (old(), request(), auth(), etc.)
+    - ✓ Proper error handling (try-catch, custom exceptions)
+
+    **Performance:**
+    - ✓ Database indexing on queried columns
+    - ✓ Caching frequently accessed data (cache() facade)
+    - ✓ Query optimization (select specific columns, chunking)
+    - ✓ Avoiding memory leaks (large collections, file handles)
+    - ✓ Using database transactions appropriately
+
+    **Code Organization:**
+    - ✓ Controllers are thin (business logic in services/actions)
+    - ✓ Models contain only data logic
+    - ✓ Proper use of Form Requests for validation
+    - ✓ Resources/Transformers for API responses
+    - ✓ Jobs for background processing
+    - ✓ Events and Listeners for decoupled logic
+
+    **Common Laravel Pitfalls to Check:**
+    - ⚠️ Not using DB transactions for multi-step operations
+    - ⚠️ Raw SQL without parameter binding
+    - ⚠️ Using select * instead of specific columns
+    - ⚠️ Not eager loading relationships (N+1 problem)
+    - ⚠️ Missing validation on user input
+    - ⚠️ Storing sensitive data in plain text
+    - ⚠️ Not using rate limiting on sensitive endpoints
+    - ⚠️ Forgetting to check authorization before actions
+    """
+
+        elif framework == 'Nuxt.js':
+            return """
+    🔧 **Nuxt.js-Specific Review Checklist:**
+
+    **Security:**
+    - ✓ Input sanitization (especially for v-html)
+    - ✓ CSRF protection on API calls
+    - ✓ Secure cookie configuration (httpOnly, secure, sameSite)
+    - ✓ Environment variables not exposed to client
+    - ✓ API keys and secrets in server-side only
+    - ✓ Content Security Policy (CSP) headers configured
+    - ✓ XSS prevention (avoid v-html with user input)
+
+    **Performance & SEO:**
+    - ✓ Proper use of asyncData vs fetch vs created
+    - ✓ Static generation (SSG) where possible
+    - ✓ Dynamic imports for heavy components
+    - ✓ Image optimization (nuxt/image module)
+    - ✓ Meta tags for SEO (useHead, useSeoMeta)
+    - ✓ Lazy loading components and images
+    - ✓ Avoiding unnecessary re-renders
+    - ✓ Using computed properties instead of methods in templates
+    - ✓ Proper error handling (error.vue, try-catch)
+
+    **Nuxt 3 Best Practices:**
+    - ✓ Using Composition API (setup, ref, reactive)
+    - ✓ Auto-imports (no manual component imports needed)
+    - ✓ Proper use of composables (useState, useFetch, useAsyncData)
+    - ✓ Server routes in /server/api for backend logic
+    - ✓ Middleware for route protection
+    - ✓ Proper TypeScript usage (type safety)
+    - ✓ Using Pinia for state management (not Vuex)
+
+    **Common Nuxt Pitfalls:**
+    - ⚠️ Accessing window/document in SSR context
+    - ⚠️ Not handling async data errors
+    - ⚠️ Memory leaks from event listeners not cleaned up
+    - ⚠️ Large bundle sizes (check imports)
+    - ⚠️ Using fetch in components without error handling
+    - ⚠️ Not using key attribute in v-for loops
+    - ⚠️ Mutating props directly
+    - ⚠️ Missing loading states for async operations
+    - ⚠️ Not optimizing images (large file sizes)
+
+    **Accessibility (a11y):**
+    - ✓ Semantic HTML elements
+    - ✓ ARIA labels where needed
+    - ✓ Keyboard navigation support
+    - ✓ Focus management
+    - ✓ Alt text for images
+    - ✓ Color contrast ratios
+    """
+
+        elif framework == 'Vue.js':
+            return """
+    🔧 **Vue.js-Specific Review Checklist:**
+
+    **Best Practices:**
+    - ✓ Proper component naming (PascalCase)
+    - ✓ Props validation with types
+    - ✓ Emitting events instead of mutating props
+    - ✓ Using computed properties for derived state
+    - ✓ Proper lifecycle hook usage
+    - ✓ Key attribute in v-for
+    - ✓ Avoiding v-if with v-for on same element
+    - ✓ Using $emit for child-to-parent communication
+
+    **Performance:**
+    - ✓ Lazy loading components
+    - ✓ Using v-show vs v-if appropriately
+    - ✓ Avoiding unnecessary watchers
+    - ✓ Functional components for simple presentational components
+    - ✓ Virtual scrolling for large lists
+    """
+
+        elif framework == 'React':
+            return """
+    🔧 **React-Specific Review Checklist:**
+
+    **Best Practices:**
+    - ✓ Proper hook usage (rules of hooks)
+    - ✓ Dependency arrays in useEffect
+    - ✓ Key prop in lists
+    - ✓ Memoization (useMemo, useCallback) where appropriate
+    - ✓ Error boundaries for error handling
+    - ✓ Avoiding prop drilling (Context, composition)
+    - ✓ Proper TypeScript types for props
+
+    **Performance:**
+    - ✓ React.memo for expensive components
+    - ✓ Code splitting with lazy and Suspense
+    - ✓ Avoiding unnecessary re-renders
+    """
+
+        elif framework in ['PHP', 'Symfony']:
+            return """
+    🔧 **PHP-Specific Review Checklist:**
+
+    **Security:**
+    - ✓ Parameterized queries (no string concatenation in SQL)
+    - ✓ Input validation and sanitization
+    - ✓ Password hashing (password_hash/password_verify)
+    - ✓ CSRF protection
+    - ✓ XSS prevention (htmlspecialchars, ENT_QUOTES)
+
+    **Best Practices:**
+    - ✓ PSR standards compliance (PSR-1, PSR-12)
+    - ✓ Type declarations (strict_types=1)
+    - ✓ Proper error handling (exceptions, not error suppression)
+    - ✓ Dependency injection
+    - ✓ Using modern PHP features (null coalescing, spread operator)
+    """
+
+        elif framework == 'Python':
+            return """
+    🔧 **Python-Specific Review Checklist:**
+
+    **Best Practices:**
+    - ✓ PEP 8 compliance (formatting, naming)
+    - ✓ Type hints for function parameters and returns
+    - ✓ Docstrings for classes and functions
+    - ✓ Context managers for resource handling (with)
+    - ✓ List comprehensions instead of loops (where readable)
+    - ✓ Using enumerate and zip appropriately
+    - ✓ Exception handling (specific exceptions, not bare except)
+    """
+
+        else:
+            return """
+    🔧 **General Code Review Checklist:**
+
+    **Security:**
+    - ✓ Input validation and sanitization
+    - ✓ Proper authentication and authorization
+    - ✓ Secure data storage and transmission
+    - ✓ No hardcoded secrets or credentials
+
+    **Best Practices:**
+    - ✓ Clear, descriptive naming
+    - ✓ Single Responsibility Principle
+    - ✓ DRY (Don't Repeat Yourself)
+    - ✓ Proper error handling
+    - ✓ Comprehensive comments for complex logic
+    - ✓ Efficient algorithms and data structures
+    """
 
     async def _call_openai(self, prompt: str) -> str:
         """Call OpenAI API with circuit breaker protection"""
