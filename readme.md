@@ -1,10 +1,11 @@
 # Merge Mind
 
-An intelligent, self-learning code review bot for self-hosted GitLab instances. Uses OpenAI's GPT models to provide context-aware code reviews while learning from your team's coding patterns and preferences.
+An intelligent, self-learning code review bot for self-hosted GitLab instances. Uses OpenAI's GPT models to provide context-aware, framework-specific code reviews while learning from your team's coding patterns and preferences.
 
 ## 🌟 Features
 
 - **🤖 AI-Powered Reviews**: Leverages OpenAI GPT-4 for intelligent code analysis
+- **🎯 Framework-Aware**: Specialized reviews for Laravel, Nuxt.js, Vue.js, React, Symfony, Django, and more
 - **📚 Learning Capability**: Learns from your codebase and adapts to team patterns
 - **🎯 Multi-Project Support**: Configure different rules for different projects
 - **💬 Smart Comments**: Posts inline comments on specific issues with severity levels
@@ -19,6 +20,30 @@ An intelligent, self-learning code review bot for self-hosted GitLab instances. 
 - **🛡️ Enterprise Reliability**: Request validation, structured logging, and graceful degradation
 - **🔄 Hot Reload Support**: Update AI model and API keys without restarting the service
 - **🎨 Web Dashboard**: Modern React-based dashboard for monitoring and management
+
+## 🎯 Framework-Specific Reviews
+
+Merge Mind provides specialized, best-practice reviews for:
+
+### Laravel (PHP)
+- **Security**: SQL injection, CSRF, mass assignment, authorization
+- **Performance**: N+1 queries, eager loading, database indexing
+- **Best Practices**: PSR standards, Eloquent usage, service containers
+- **Common Pitfalls**: Missing transactions, raw queries, validation gaps
+
+### Nuxt.js (Vue.js)
+- **SSR/SSG**: Proper use of asyncData, fetch, server routes
+- **Performance**: Code splitting, lazy loading, image optimization
+- **SEO**: Meta tags, structured data, semantic HTML
+- **Security**: XSS prevention, secure cookies, API key protection
+- **Accessibility**: ARIA labels, keyboard navigation, semantic HTML
+
+### Other Frameworks
+- **React**: Hooks, memoization, error boundaries
+- **Vue.js**: Component patterns, lifecycle hooks, reactivity
+- **Symfony**: Dependency injection, services, security
+- **Django**: ORM usage, views, middleware patterns
+- **FastAPI**: Async patterns, dependency injection, Pydantic models
 
 ## 📋 Requirements
 
@@ -84,18 +109,71 @@ Then edit `config/projects.yaml` with your project details:
 
 ```yaml
 projects:
-  - project_id: 123  # Your GitLab project ID
+  # Laravel API Project
+  - project_id: 123
     name: "backend-api"
     review_enabled: true
     auto_review_on_open: true
+    review_drafts: false
     min_lines_changed: 10
+    max_files_per_review: 50
     excluded_paths:
       - vendor/
       - node_modules/
+      - storage/
+      - bootstrap/cache/
     included_extensions:
-      - .py
-      - .go
+      - .php
+      - .blade.php
       - .sql
+    review_model: gpt-4-turbo-preview
+    custom_prompts:
+      laravel_focus: |
+        Focus on Laravel-specific best practices:
+        - Eloquent relationships and query optimization
+        - Service layer architecture
+        - Form Request validation
+        - API Resource usage
+    team_preferences:
+      - "Always use Form Requests for validation"
+      - "Services must be in App\\Services namespace"
+      - "Use Repository pattern for complex queries"
+      - "API responses must use Resource classes"
+
+  # Nuxt.js Frontend Project
+  - project_id: 456
+    name: "frontend-app"
+    review_enabled: true
+    auto_review_on_open: true
+    review_drafts: true  # Review drafts for frontend
+    min_lines_changed: 5
+    max_files_per_review: 30
+    excluded_paths:
+      - node_modules/
+      - .nuxt/
+      - dist/
+      - .output/
+    included_extensions:
+      - .vue
+      - .js
+      - .ts
+      - .tsx
+      - .css
+      - .scss
+    review_model: gpt-4-turbo-preview
+    custom_prompts:
+      nuxt_focus: |
+        Focus on Nuxt.js and Vue.js best practices:
+        - SSR/SSG considerations
+        - Composables usage
+        - Performance optimization
+        - Accessibility standards
+    team_preferences:
+      - "Use Composition API over Options API"
+      - "Components in PascalCase"
+      - "Use Pinia for state management"
+      - "Always handle loading and error states"
+      - "Follow WCAG 2.1 Level AA accessibility"
 ```
 
 ### 3. Initial Learning (Optional but Recommended)
@@ -120,7 +198,7 @@ docker compose up -d --build
 # Train on local codebase
 docker compose exec ai-reviewer \
   python scripts/learn_local_codebase.py my_project /app/my_codebase \
-  --extensions .py .js .ts .java
+  --extensions .php .blade.php .vue .js .ts
 ```
 
 ### 4. Run the Service
@@ -213,6 +291,73 @@ curl -X POST http://localhost:8080/reload
 - `SERVER_HOST`, `SERVER_PORT`, `SERVER_WORKERS` - Server configuration
 - Vector store configuration
 
+### Framework-Specific Configuration
+
+#### Laravel Projects
+
+```yaml
+projects:
+  - project_id: 123
+    name: "laravel-api"
+    included_extensions:
+      - .php
+      - .blade.php
+      - .sql
+    excluded_paths:
+      - vendor/
+      - storage/
+      - bootstrap/cache/
+      - public/build/
+    custom_prompts:
+      security_focus: |
+        Pay special attention to:
+        - Eloquent query injection risks
+        - Mass assignment vulnerabilities
+        - Missing authorization checks
+        - CSRF protection on forms
+    team_preferences:
+      - "Use Form Requests for all validation"
+      - "Services in App\\Services namespace"
+      - "Repositories for complex queries"
+      - "API Resources for all responses"
+      - "Jobs for background processing"
+      - "Events for decoupled notifications"
+```
+
+#### Nuxt.js Projects
+
+```yaml
+projects:
+  - project_id: 456
+    name: "nuxt-frontend"
+    included_extensions:
+      - .vue
+      - .js
+      - .ts
+      - .css
+      - .scss
+    excluded_paths:
+      - node_modules/
+      - .nuxt/
+      - .output/
+      - dist/
+    custom_prompts:
+      frontend_focus: |
+        Focus on:
+        - SSR/SSG hydration issues
+        - Performance (bundle size, lazy loading)
+        - SEO optimization
+        - Accessibility (WCAG 2.1 AA)
+        - Security (XSS, CSRF, secure cookies)
+    team_preferences:
+      - "Composition API only"
+      - "Use composables from /composables"
+      - "Server routes in /server/api"
+      - "Pinia for state management"
+      - "TypeScript strict mode"
+      - "Always handle async errors"
+```
+
 ### Personal Access Token Permissions
 
 Create a GitLab personal access token with these scopes:
@@ -232,7 +377,7 @@ Each project in `config/projects.yaml` can have:
 | `min_lines_changed` | Minimum lines to trigger review | `10` |
 | `max_files_per_review` | Max files to review at once | `50` |
 | `excluded_paths` | Paths to ignore | `['vendor/', 'node_modules/']` |
-| `included_extensions` | File types to review | `['.py', '.js', '.ts', ...]` |
+| `included_extensions` | File types to review | `['.php', '.js', '.vue', ...]` |
 | `review_model` | OpenAI model to use | `gpt-4-turbo-preview` |
 | `custom_prompts` | Custom review prompts | `{}` |
 | `team_preferences` | Team-specific preferences | `[]` |
@@ -305,6 +450,8 @@ ai_code_review:
 |----------|--------|-------------|
 | `/reviews/active` | GET | Get active reviews |
 | `/reviews/history` | GET | Get review history |
+| `/learning/stats` | GET | Get learning statistics |
+| `/learning/stats/{project_id}` | GET | Get project learning stats |
 
 ## 🔌 Circuit Breaker Protection
 
@@ -393,12 +540,17 @@ docker compose exec ai-reviewer \
   python scripts/learn_local_codebase.py <project_name> <local_path> [options]
 
 # Options:
-# --extensions .py .js .ts    # File extensions to include
+# --extensions .php .vue .js    # File extensions to include
 
-# Example:
+# Example - Laravel project:
 docker compose exec ai-reviewer \
-  python scripts/learn_local_codebase.py my_api /app/my_codebase \
-  --extensions .py .go .sql
+  python scripts/learn_local_codebase.py laravel_api /app/my_laravel_app \
+  --extensions .php .blade.php .sql
+
+# Example - Nuxt.js project:
+docker compose exec ai-reviewer \
+  python scripts/learn_local_codebase.py nuxt_frontend /app/my_nuxt_app \
+  --extensions .vue .js .ts .css .scss
 ```
 
 ### GitLab Repository Training
@@ -445,7 +597,8 @@ docker compose exec ai-reviewer \
 
 # From local codebase (recommended)
 docker compose exec ai-reviewer \
-  python scripts/learn_local_codebase.py my_project /path/to/codebase
+  python scripts/learn_local_codebase.py my_project /path/to/codebase \
+  --extensions .php .vue .js .ts
 ```
 
 ### 2. Continuous Learning
@@ -492,53 +645,6 @@ docker compose up -d --build
 - **prometheus** (optional): Metrics collection
 - **grafana** (optional): Metrics visualization
 
-### Using Kubernetes
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: merge-mind
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: ai-reviewer
-  template:
-    metadata:
-      labels:
-        app: ai-reviewer
-    spec:
-      containers:
-      - name: reviewer
-        image: merge-mind:latest
-        env:
-        - name: GITLAB_URL
-          valueFrom:
-            secretKeyRef:
-              name: reviewer-secrets
-              key: gitlab-url
-        - name: GITLAB_TOKEN
-          valueFrom:
-            secretKeyRef:
-              name: reviewer-secrets
-              key: gitlab-token
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: reviewer-secrets
-              key: openai-key
-        ports:
-        - containerPort: 8080
-        resources:
-          limits:
-            memory: "4Gi"
-            cpu: "2"
-          requests:
-            memory: "2Gi"
-            cpu: "1"
-```
-
 ## 📈 Performance Tuning
 
 ### Vector Store Configuration
@@ -562,11 +668,11 @@ vector_store:
 
 ### OpenAI Model Selection
 
-| Model | Cost | Speed | Quality | Max Context |
-|-------|------|-------|---------|-------------|
-| gpt-4-turbo-preview | $$$ | Medium | Best | 128k tokens |
-| gpt-4 | $$ | Slow | Excellent | 8k tokens |
-| gpt-3.5-turbo | $ | Fast | Good | 16k tokens |
+| Model | Cost | Speed | Quality | Best For |
+|-------|------|-------|---------|----------|
+| gpt-4-turbo-preview | $$$ | Medium | Best | Production reviews |
+| gpt-4 | $$ | Slow | Excellent | Critical projects |
+| gpt-3.5-turbo | $ | Fast | Good | High-volume projects |
 
 ### Scaling Recommendations
 
@@ -636,6 +742,12 @@ vector_store:
 - Verify CORS settings in `config/config.yaml`
 - Ensure all services are running: `docker compose ps`
 - Check network connectivity between services
+
+**Framework-specific reviews not working:**
+- Verify file extensions in `included_extensions`
+- Check if framework detection is working in logs
+- Ensure proper file paths (e.g., `pages/` for Nuxt)
+- Review custom prompts configuration
 
 ## 🧪 Testing
 
@@ -715,32 +827,15 @@ mypy src/
 6. Push to branch: `git push origin feature/amazing-feature`
 7. Open a Pull Request
 
-### Adding New Language Support
+### Adding New Framework Support
 
-1. Add language detection in `src/gitlab_client.py`
-2. Add pattern extraction in `src/learning_engine.py`
-3. Add language-specific prompts in `src/openai_analyzer.py`
-4. Add tests for the new language
+To add support for a new framework:
 
-
-### Why Support?
-
-Your contributions help:
-- ⚡ **Faster Development**: More time dedicated to new features
-- 🐛 **Bug Fixes**: Quicker response to issues and bugs
-- 📚 **Better Documentation**: Comprehensive guides and tutorials
-- 🎯 **Community Support**: Help other users succeed
-- 🚀 **New Features**: Bring your feature requests to life
-
-### Other Ways to Help
-
-- ⭐ **Star the Repository**: Show your appreciation on GitHub
-- 🐛 **Report Bugs**: Help us identify and fix issues
-- 💡 **Share Ideas**: Suggest new features and improvements
-- 📖 **Improve Docs**: Contribute to documentation
-- 🗣️ **Spread the Word**: Tell others about Merge Mind
-
-Every contribution, no matter how small, makes a difference! Thank you for your support! 🙏
+1. Update `_detect_framework()` in `src/openai_analyzer.py`
+2. Add framework-specific guidelines in `_get_framework_specific_guidelines()`
+3. Add example configuration in README
+4. Add tests for the new framework
+5. Update documentation
 
 ## 📄 License
 
