@@ -78,6 +78,7 @@ class TestGitLabClient:
         ]
 
         mock_mr.diffs.list.return_value = [mock_diff]
+        mock_mr.diffs.get.return_value = mock_diff
         mock_project.mergerequests.get.return_value = mock_mr
         mock_gitlab.projects.get.return_value = mock_project
 
