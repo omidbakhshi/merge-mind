@@ -5,6 +5,7 @@ title: AI code review
 description: AI-powered code review assistant for gitlab - intelligent suggestions and automated analysis.
 baseurl: "/merge-mind"
 url: "https://omidbakhshi.github.io"
+repository: https://github.com/omidbakhshi/merge-mind
 
 # Theme
 remote_theme: pages-themes/hacker@v0.2.0
