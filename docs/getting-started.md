@@ -164,11 +164,11 @@ docker compose ps
 
 Expected output:
 ```
-NAME                STATUS
-merge-mind          Up (healthy)
-qdrant              Up
+NAME                 STATUS
+merge-mind           Up (healthy)
+qdrant               Up
 merge-mind-dashboard Up
-merge-mind-proxy    Up
+merge-mind-proxy     Up
 ```
 
 ### View Logs
@@ -266,18 +266,6 @@ The bot will post:
 
 ---
 
-## Next Steps
-
-Now that you're set up, explore these features:
-
-- [📋 Configuration Options](/docs/configuration) - Customize review behavior
-- [🎯 Framework-Specific Reviews](/docs/frameworks) - Laravel, Nuxt.js, React, etc.
-- [📚 Training & Learning](/docs/training) - Improve review accuracy
-- [📊 Monitoring & Metrics](/docs/monitoring) - Track performance
-- [🔧 Troubleshooting](/docs/troubleshooting) - Common issues
-
----
-
 ## Quick Tips
 
 {: .tip }
@@ -300,14 +288,7 @@ Now that you're set up, explore these features:
 
 ## Need Help?
 
-- 📚 [Documentation](/docs)
-- 💬 [GitHub Discussions](https://github.com/omidbakhshi/merge-mind/discussions)
 - 🐛 [Report Issues](https://github.com/omidbakhshi/merge-mind/issues)
 - 📧 [Email Support](mailto:omid.bakhshi.dev@gmail.com)
 
 ---
-
-<div style="text-align: center; margin-top: 3rem;">
-  <p><strong>Ready to configure advanced features?</strong></p>
-  <a href="/docs/configuration" class="btn btn-primary">Configure Merge Mind →</a>
-</div>

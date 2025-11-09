@@ -7,7 +7,8 @@ baseurl: "/merge-mind"
 url: "https://omidbakhshi.github.io"
 
 # Theme
-remote_theme: just-the-docs/just-the-docs@v0.7.0
+remote_theme: pages-themes/hacker@v0.2.0
+
 
 # Color scheme
 color_scheme: dark
@@ -97,9 +98,13 @@ exclude:
   - .sass-cache/
   - .jekyll-cache/
   - gemfiles/
+  - frontend/
+  - readme.md
+  - docker/
 
 # Plugins
 plugins:
   - jekyll-seo-tag
   - jekyll-github-metadata
   - jekyll-include-cache
+  - jekyll-remote-theme
