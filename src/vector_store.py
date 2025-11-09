@@ -3,6 +3,7 @@ import hashlib
 from typing import List, Dict, Any, Optional, cast, Union, TypedDict
 from abc import ABC, abstractmethod
 from datetime import datetime
+import numpy as np
 
 # Vector store backend imports (install as needed)
 
@@ -456,7 +457,7 @@ class ChromaDBStore(VectorStoreBase):
             try:
                 self.collection.add(
                     ids=ids,
-                    embeddings=embeddings,
+                    embeddings=np.array(embeddings),
                     metadatas=metadatas,
                     documents=contents
                 )
@@ -475,7 +476,7 @@ class ChromaDBStore(VectorStoreBase):
 
             # Search
             results = self.collection.query(
-                query_embeddings=[query_embedding],
+                query_embeddings=np.array([query_embedding]),
                 n_results=limit
             )
 
@@ -512,7 +513,7 @@ class ChromaDBStore(VectorStoreBase):
             # Update in ChromaDB
             self.collection.update(
                 ids=[doc_id],
-                embeddings=[embedding],
+                embeddings=np.array([embedding]),
                 metadatas=[metadata],
                 documents=[document["content"]]
             )

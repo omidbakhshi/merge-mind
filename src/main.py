@@ -840,7 +840,7 @@ class GitLabReviewerApp:
             """Get review history with optional filtering"""
             # For now, return empty list as we don't have persistent history storage
             # In a real implementation, this would query a database or metrics store
-            reviews = []
+            reviews: List[ReviewHistoryItem] = []
 
             # If we had metrics data, we could populate this
             # For now, return empty to avoid errors
