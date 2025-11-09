@@ -136,7 +136,6 @@ projects:
     review_model: gpt-4-turbo-preview
 ```
 
-[See full configuration options →](/docs/configuration)
 
 ---
 
@@ -246,7 +245,6 @@ docker compose exec ai-reviewer \
 
 Training typically takes 5-15 minutes depending on codebase size.
 
-[Learn more about training →](/docs/training)
 
 ---
 
