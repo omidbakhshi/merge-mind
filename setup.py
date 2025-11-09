@@ -6,12 +6,12 @@ with open("readme.md", "r", encoding="utf-8") as fh:
 setup(
     name="merge-mind",
     version="1.2.0",
-    author="Your Team",
-    author_email="ai-reviewer@yourcompany.com",
+    author="Omid Bakhshi",
+    author_email="Omid.bakhshi.dev@gmail.com",
     description="AI-powered code review assistant for GitLab - Merge Mind",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourorg/merge-mind",
+    url="https://omidbakhshi.github.io/merge-mind/",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
