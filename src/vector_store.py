@@ -4,6 +4,10 @@ from typing import List, Dict, Any, Optional, cast, Union, TypedDict
 from abc import ABC, abstractmethod
 from datetime import datetime
 import numpy as np
+from pathlib import Path
+
+# Configure logger at module level
+logger = logging.getLogger(__name__)
 
 # Vector store backend imports (install as needed)
 
@@ -136,11 +140,22 @@ class QdrantStore(VectorStoreBase):
             return self._embedding_cache[text_hash]
 
         try:
-            response = openai.Embedding.create(
-                input=text,
-                model="text-embedding-ada-002"
-            )
-            embedding = response['data'][0]['embedding']
+            # Support both old and new OpenAI API versions
+            try:
+                # Try new OpenAI client API (v1.0+)
+                client = openai.OpenAI(api_key=self.openai_api_key)
+                response = client.embeddings.create(
+                    input=text,
+                    model="text-embedding-3-small"
+                )
+                embedding = response.data[0].embedding
+            except (AttributeError, TypeError):
+                # Fallback to old OpenAI API (v0.27.0 and earlier)
+                response = openai.Embedding.create(
+                    input=text,
+                    model="text-embedding-ada-002"
+                )
+                embedding = response['data'][0]['embedding']
 
             # Cache the embedding
             if len(self._embedding_cache) < self._cache_max_size:
@@ -154,9 +169,12 @@ class QdrantStore(VectorStoreBase):
 
         except Exception as e:
             error_str = str(e)
-            if "maximum context length" in error_str:
+            if "maximum context length" in error_str or "token" in error_str.lower():
                 logger.warning(f"Text too long for embedding ({error_str}), skipping")
                 raise ValueError(f"Text exceeds token limit: {error_str}")
+            if "api_key" in error_str.lower() or "authentication" in error_str.lower():
+                logger.error(f"OpenAI API authentication failed. Check your API key. Error: {e}")
+                raise ValueError(f"OpenAI API key not configured or invalid: {e}")
             logger.error(f"Failed to generate embedding: {e}")
             raise
 
@@ -344,6 +362,9 @@ class ChromaDBStore(VectorStoreBase):
         # Set up OpenAI for embeddings
         if openai_api_key:
             openai.api_key = openai_api_key
+            logger.debug("OpenAI API key configured for ChromaDB embeddings")
+        else:
+            logger.warning("No OpenAI API key provided. Embeddings may fail. Set OPENAI_API_KEY environment variable.")
 
         # Embedding cache for performance
         self._embedding_cache: Dict[str, List[float]] = {}
@@ -366,11 +387,22 @@ class ChromaDBStore(VectorStoreBase):
             return self._embedding_cache[text_hash]
 
         try:
-            response = openai.Embedding.create(
-                input=text,
-                model="text-embedding-ada-002"
-            )
-            embedding = response['data'][0]['embedding']
+            # Support both old and new OpenAI API versions
+            try:
+                # Try new OpenAI client API (v1.0+)
+                client = openai.OpenAI(api_key=self.openai_api_key)
+                response = client.embeddings.create(
+                    input=text,
+                    model="text-embedding-3-small"
+                )
+                embedding = response.data[0].embedding
+            except (AttributeError, TypeError):
+                # Fallback to old OpenAI API (v0.27.0 and earlier)
+                response = openai.Embedding.create(
+                    input=text,
+                    model="text-embedding-ada-002"
+                )
+                embedding = response['data'][0]['embedding']
 
             # Cache the embedding
             if len(self._embedding_cache) < self._cache_max_size:
@@ -384,9 +416,12 @@ class ChromaDBStore(VectorStoreBase):
 
         except Exception as e:
             error_str = str(e)
-            if "maximum context length" in error_str:
+            if "maximum context length" in error_str or "token" in error_str.lower():
                 logger.warning(f"Text too long for embedding ({error_str}), skipping")
                 raise ValueError(f"Text exceeds token limit: {error_str}")
+            if "api_key" in error_str.lower() or "authentication" in error_str.lower():
+                logger.error(f"OpenAI API authentication failed. Check your API key. Error: {e}")
+                raise ValueError(f"OpenAI API key not configured or invalid: {e}")
             logger.error(f"Failed to generate embedding: {e}")
             raise
 
@@ -554,11 +589,6 @@ class ChromaDBStore(VectorStoreBase):
             else:
                 logger.error(f"Failed to get collection stats: {e}")
                 return {}
-
-
-from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 
 class CodeMemoryManager:
